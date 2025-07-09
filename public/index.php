@@ -1,0 +1,281 @@
+<?php
+require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/functions.php';
+?>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Life Church - Sistema de Gestão Financeira</title>
+    
+    <!-- Tailwind CSS with Custom Theme -->
+    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: { 
+                    primary: "#1a73e8",
+                    secondary: "#f2b900" // Cor secundária para contraste
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif'],
+                    pacifico: ['Pacifico', 'cursive'],
+                },
+                 borderRadius: {
+                    'button': '8px',
+                    'card': '16px',
+                 },
+            },
+        },
+    };
+    </script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <!-- Remixicon for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css">
+
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .hero-section {
+        background-image: url('https://placehold.co/1920x900/e8f0fe/1a73e8?text=Controlo+Financeiro');
+        background-size: cover;
+        background-position: center;
+      }
+      .hero-overlay {
+        background: linear-gradient(90deg, rgba(248, 250, 252, 0.95) 0%, rgba(248, 250, 252, 0.9) 50%, rgba(248, 250, 252, 0) 100%);
+      }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- ========== HEADER ========== -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+            <a href="index.php" class="text-2xl font-['Pacifico'] text-primary">Life Church</a>
+            
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="index.php" class="text-primary font-semibold">Home</a>
+                <a href="about.php" class="text-gray-600 hover:text-primary font-medium">Sobre</a>
+                <a href="gallery.php" class="text-gray-600 hover:text-primary font-medium">Galeria</a>
+                <a href="contact.php" class="text-gray-600 hover:text-primary font-medium">Contacto</a>
+            </nav>
+
+            <div class="flex items-center space-x-4">
+                <a href="login.php" class="bg-primary text-white px-5 py-2 !rounded-button whitespace-nowrap hover:bg-primary/90 transition-colors">
+                    Aceder ao Portal
+                </a>
+                <button class="md:hidden w-10 h-10 flex items-center justify-center text-gray-700" id="mobile-menu-button">
+                    <i class="ri-menu-line ri-xl"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div class="hidden" id="mobile-menu">
+            <nav class="flex flex-col p-4 bg-white border-t border-gray-100">
+                <a href="index.php" class="py-2 px-4 text-gray-700 hover:text-primary font-medium rounded-md hover:bg-gray-50">Home</a>
+                <a href="about.php" class="py-2 px-4 text-gray-700 hover:text-primary font-medium rounded-md hover:bg-gray-50">Sobre</a>
+                <a href="gallery.php" class="py-2 px-4 text-gray-700 hover:text-primary font-medium rounded-md hover:bg-gray-50">Galeria</a>
+                <a href="contact.php" class="py-2 px-4 text-gray-700 hover:text-primary font-medium rounded-md hover:bg-gray-50">Contacto</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main>
+        <!-- Hero Section -->
+        <section class="hero-section relative h-[90vh] flex items-center">
+            <div class="hero-overlay w-full h-full absolute inset-0"></div>
+            <div class="container mx-auto px-4 relative z-10">
+                <div class="max-w-3xl">
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+                        Sistema de Gestão Financeira da Igreja
+                    </h1>
+                    <p class="text-lg text-gray-700 mb-8 max-w-2xl">
+                        Uma plataforma para organizar e controlar as entradas, saídas e relatórios financeiros da sua igreja com eficiência e transparência.
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="login.php" class="bg-primary text-white px-8 py-4 !rounded-button whitespace-nowrap hover:bg-primary/90 font-semibold text-lg flex items-center justify-center shadow-lg shadow-primary/30 transition-all hover:shadow-xl hover:-translate-y-0.5">
+                           <i class="ri-login-box-line mr-2"></i>Aceder ao Portal
+                        </a>
+                         <a href="#features" class="bg-white text-primary border border-gray-200 px-8 py-4 !rounded-button whitespace-nowrap hover:bg-gray-100 hover:border-gray-300 font-semibold text-lg flex items-center justify-center transition-all">
+                           <i class="ri-arrow-down-s-line mr-2"></i>Conheça o Sistema
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="py-24 bg-white">
+            <div class="container mx-auto px-4">
+                <div class="text-center mb-16">
+                    <span class="text-primary font-semibold uppercase tracking-wider">Funcionalidades</span>
+                    <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-4">
+                       Funcionalidades Principais do Sistema
+                    </h2>
+                    <p class="text-gray-600 max-w-2xl mx-auto">
+                        O sistema oferece as ferramentas essenciais para uma gestão financeira clara e organizada.
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Feature 1: Entradas -->
+                    <div class="bg-white p-8 rounded-card border border-gray-100 flex flex-col items-center text-center transition-all duration-300 hover:shadow-2xl hover:border-primary/20 hover:-translate-y-2">
+                        <div class="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6">
+                            <i class="ri-arrow-right-circle-line ri-2x"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">Registo de Entradas</h3>
+                        <p class="text-gray-600">Registe dízimos, ofertas e outras entradas de forma detalhada e segura.</p>
+                    </div>
+                     <!-- Feature 2: Saídas -->
+                    <div class="bg-white p-8 rounded-card border border-gray-100 flex flex-col items-center text-center transition-all duration-300 hover:shadow-2xl hover:border-primary/20 hover:-translate-y-2">
+                        <div class="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6">
+                           <i class="ri-arrow-left-circle-line ri-2x"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">Controlo de Saídas</h3>
+                        <p class="text-gray-600">Categorize todas as despesas da igreja para uma visão clara de onde os recursos estão a ser aplicados.</p>
+                    </div>
+                    <!-- Feature 3: Relatórios -->
+                    <div class="bg-white p-8 rounded-card border border-gray-100 flex flex-col items-center text-center transition-all duration-300 hover:shadow-2xl hover:border-primary/20 hover:-translate-y-2">
+                        <div class="w-16 h-16 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mb-6">
+                            <i class="ri-file-chart-line ri-2x"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-3">Relatórios Detalhados</h3>
+                        <p class="text-gray-600">Gere relatórios financeiros mensais, anuais ou por período para total transparência e planeamento.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works Section -->
+        <section class="py-24 bg-gray-50">
+             <div class="container mx-auto px-4">
+                <div class="text-center mb-16">
+                    <span class="text-primary font-semibold uppercase tracking-wider">Como Utilizar</span>
+                    <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mt-2 mb-4">Comece em 3 Passos</h2>
+                </div>
+                <div class="relative grid grid-cols-1 md:grid-cols-3 gap-8 text-center max-w-4xl mx-auto">
+                    <!-- Dotted line for desktop -->
+                    <div class="hidden md:block absolute top-10 left-0 w-full h-0">
+                         <svg width="100%" height="2" class="absolute">
+                            <line x1="0" y1="1" x2="100%" y2="1" stroke-width="2" stroke-dasharray="8 8" class="stroke-gray-300"/>
+                        </svg>
+                    </div>
+                    <!-- Step 1 -->
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div class="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-2xl font-bold mb-4 border-4 border-gray-50">1</div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Crie a sua Conta</h3>
+                        <p class="text-gray-600">Registe a sua igreja na plataforma de forma rápida e segura para começar a usar o sistema.</p>
+                    </div>
+                     <!-- Step 2 -->
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div class="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-2xl font-bold mb-4 border-4 border-gray-50">2</div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Registe as Transações</h3>
+                        <p class="text-gray-600">Comece a lançar as entradas e saídas diárias da sua igreja com os nossos formulários simples.</p>
+                    </div>
+                     <!-- Step 3 -->
+                    <div class="relative z-10 flex flex-col items-center">
+                        <div class="w-20 h-20 bg-primary text-white rounded-full flex items-center justify-center text-2xl font-bold mb-4 border-4 border-gray-50">3</div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Analise os Relatórios</h3>
+                        <p class="text-gray-600">Utilize o dashboard e os relatórios para ter uma visão completa da saúde financeira da sua igreja.</p>
+                    </div>
+                </div>
+             </div>
+        </section>
+
+        <!-- Call to Action Section -->
+        <section class="py-24 bg-white">
+            <div class="container mx-auto px-4">
+                <div class="bg-primary rounded-card text-white p-12 text-center flex flex-col items-center">
+                     <h2 class="text-3xl md:text-4xl font-bold mb-4">Aceda ao Portal Financeiro</h2>
+                     <p class="max-w-2xl mx-auto mb-8 opacity-90">
+                         Crie uma conta para começar a utilizar as ferramentas de gestão financeira para a sua igreja.
+                     </p>
+                     <a href="register.php" class="bg-white text-primary font-bold px-8 py-4 !rounded-button whitespace-nowrap hover:bg-gray-200 text-lg shadow-lg transition-transform hover:scale-105">
+                        Registar Agora
+                     </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ========== FOOTER ========== -->
+    <footer class="bg-gray-900 text-white pt-16 pb-8">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+                <div>
+                    <h3 class="text-xl font-['Pacifico'] text-white mb-6">Life Church</h3>
+                    <p class="text-gray-400 mb-6">
+                        Sistema para gestão financeira de igrejas.
+                    </p>
+                     <div class="flex space-x-4">
+                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary transition-colors"><i class="ri-facebook-fill"></i></a>
+                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary transition-colors"><i class="ri-instagram-fill"></i></a>
+                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-primary transition-colors"><i class="ri-youtube-fill"></i></a>
+                    </div>
+                </div>
+                <div>
+                     <h3 class="text-lg font-semibold mb-6">Navegação</h3>
+                    <ul class="space-y-3">
+                        <li><a href="index.php" class="text-gray-400 hover:text-white">Home</a></li>
+                        <li><a href="about.php" class="text-gray-400 hover:text-white">Sobre</a></li>
+                        <li><a href="gallery.php" class="text-gray-400 hover:text-white">Galeria</a></li>
+                        <li><a href="contact.php" class="text-gray-400 hover:text-white">Contacto</a></li>
+                    </ul>
+                </div>
+                <div>
+                     <h3 class="text-lg font-semibold mb-6">Portal</h3>
+                    <ul class="space-y-3">
+                        <li><a href="login.php" class="text-gray-400 hover:text-white">Login</a></li>
+                        <li><a href="register.php" class="text-gray-400 hover:text-white">Registar</a></li>
+                    </ul>
+                </div>
+                <div>
+                     <h3 class="text-lg font-semibold mb-6">Contacto</h3>
+                     <ul class="space-y-3 text-gray-400">
+                        <li class="flex items-start">
+                           <i class="ri-map-pin-line mr-3 mt-1"></i>
+                           <span>Cidade de Tete, Bairro Chingodzi</span>
+                        </li>
+                         <li class="flex items-center">
+                           <i class="ri-phone-line mr-3"></i>
+                           <span>+258 84 216 3212</span>
+                        </li>
+                         <li class="flex items-center">
+                           <i class="ri-mail-line mr-3"></i>
+                           <span>hananiasthaunde@gmail.com</span>
+                        </li>
+                     </ul>
+                </div>
+            </div>
+            <div class="pt-8 border-t border-gray-800 text-center">
+                <p class="text-gray-500">&copy; <?php echo date('Y'); ?> Life Church. Todos os direitos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const menuButton = document.getElementById("mobile-menu-button");
+      const mobileMenu = document.getElementById("mobile-menu");
+
+      if (menuButton && mobileMenu) {
+        menuButton.addEventListener("click", function () {
+          mobileMenu.classList.toggle("hidden");
+        });
+      }
+    });
+    </script>
+</body>
+</html>

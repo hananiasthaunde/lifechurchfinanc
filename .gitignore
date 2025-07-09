@@ -1,0 +1,12 @@
+# Ficheiros de configuração específicos do ambiente (local vs. produção)
+# Estes ficheiros não devem estar no repositório.
+
+
+# Ignorar a pasta de dependências do Composer.
+# Elas devem ser instaladas no servidor com "composer install".
+
+
+
+
+
+# Ignorar pastas de logs e ficheiros temporários
