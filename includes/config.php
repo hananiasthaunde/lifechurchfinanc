@@ -1,43 +1,35 @@
 <?php
 
 /**
- * Configurações do Banco de Dados e da Aplicação
- *
- * Este arquivo contém as configurações para a conexão com o banco de dados e
- * a URL base da aplicação, essencial para o funcionamento correto dos links e redirecionamentos.
+ * Configurações do Banco de Dados e da Aplicação para o Servidor Online
  */
 
-// PASSO 1: DEFINA A URL BASE DA SUA APLICAÇÃO LOCAL
-// Substitua pelo URL que você usa no seu navegador para aceder ao projeto.
-// Certifique-se de que NÃO termina com uma barra (/).
-// Exemplo: http://localhost/lifechurch  ou  http://localhost:8080/lifechurch
-define('BASE_URL', 'http://localhost/lifechurchfinanc');
+// PASSO 1: URL BASE DA APLICAÇÃO NO SERVIDOR
+// Este é o endereço do seu site.
+define('BASE_URL', 'https://lifechurchfinance.aplicweb.com');
 
-
-
-// PASSO 2: DEFINA O CAMINHO RAIZ DO PROJETO NO SERVIDOR
+// PASSO 2: CAMINHO RAIZ DO PROJETO NO SERVIDOR
 // Esta linha geralmente não precisa de ser alterada.
 define('ROOT_PATH', realpath(__DIR__ . '/../'));
 
 
-// --- Configurações do Banco de Dados para Ambiente Local ---
+// --- Configurações do Banco de Dados para o Servidor (cPanel) ---
 
-// Servidor do banco de dados (geralmente 'localhost' ou '127.0.0.1')
+// Servidor do banco de dados (geralmente 'localhost')
 define('DB_SERVER', 'localhost');
 
-// Nome de usuário do banco de dados ('root' é o padrão no XAMPP/WAMP)
-define('DB_USERNAME', 'root');
+// Nome de usuário do banco de dados do cPanel
+define('DB_USERNAME', 'lifechurchfinanc_lifechurchfinan');
 
-// Senha do banco de dados (padrão é '' no XAMPP e 'root' no MAMP)
-define('DB_PASSWORD', '');
+// Senha do banco de dados do cPanel
+define('DB_PASSWORD', 'm6aqpIg9R0Zkpx4%');
 
-// Nome do banco de dados que você criou
+// Nome do banco de dados do cPanel (verifique se o nome está correto)
 define('DB_NAME', 'lifechurchfinanc_lifechurch_db');
 
 
 /**
  * Função para conectar ao banco de dados.
- * Não é necessário alterar esta função.
  */
 if (!function_exists('connect_db')) {
     function connect_db() {

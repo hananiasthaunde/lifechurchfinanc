@@ -18,13 +18,13 @@ define('ROOT_PATH', realpath(__DIR__ . '/../'));
 // Servidor do banco de dados (geralmente 'localhost')
 define('DB_SERVER', 'localhost');
 
-// Nome de usuário do banco de dados do cPanel (CORRIGIDO)
+// Nome de usuário do banco de dados do cPanel
 define('DB_USERNAME', 'lifechurchfinanc_lifechurchfinan');
 
 // Senha do banco de dados do cPanel
 define('DB_PASSWORD', 'm6aqpIg9R0Zkpx4%');
 
-// Nome do banco de dados do cPanel (CORRIGIDO)
+// Nome do banco de dados do cPanel (verifique se o nome está correto)
 define('DB_NAME', 'lifechurchfinanc_lifechurch_db');
 
 
