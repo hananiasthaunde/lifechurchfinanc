@@ -1,4 +1,9 @@
 <?php
+// Ativa a exibição de erros para diagnóstico
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 session_start();
 
 if (!isset($_SESSION['user_id'])) {
@@ -48,21 +53,8 @@ try {
     die("Erro: " . $e->getMessage());
 }
 
-// *** ABORDAGEM DE DIAGNÓSTICO ***
-// 1. Tenta encontrar o caminho absoluto e canónico para a imagem.
-$logoPath = realpath(__DIR__ . '/../assets/images/Church-1.png');
-$logoSrc = '';
-
-// 2. Verificação de Diagnóstico: Se o caminho não for encontrado ou o ficheiro não existir, o script para.
-if (!$logoPath || !file_exists($logoPath)) {
-    // Esta mensagem de erro ajudará a perceber o problema.
-    die("ERRO DE DIAGNÓSTICO: A imagem do logo não foi encontrada. O sistema tentou carregar a imagem a partir do seguinte caminho: " . htmlspecialchars(__DIR__ . '/../assets/images/Church-1.png') . ". Por favor, verifique se o ficheiro existe neste local e se o PHP tem permissões para o ler.");
-}
-
-// 3. Se o ficheiro for encontrado, converte-o para Base64 para o embutir no PDF.
-$imageData = base64_encode(file_get_contents($logoPath));
-$logoSrc = "data:image/png;base64,{$imageData}";
-
+// Usar a URL absoluta para a imagem, definida no config.php
+$logoUrl = BASE_URL . '/assets/images/Church-1.png';
 
 // Criar instância do mPDF
 $mpdf = new \Mpdf\Mpdf([
@@ -98,9 +90,9 @@ $html = '
 </head>
 <body>
     <div class="header">
-        <img src="' . $logoSrc . '" alt="Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
+        <img src="' . $logoUrl . '" alt="Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
         <h2>Igreja Comunidade de Vida Cristã</h2>
-        <p>'.htmlspecialchars($expense['church_name']).'</p>
+        <p>'.htmlspecialchars($expense['church_name'] ?? '').'</p>
     </div>
 
     <div class="title">RECIBO DE PAGAMENTO</div>
@@ -108,11 +100,11 @@ $html = '
     <table class="details-table">
         <tr>
             <td width="20%"><strong>Compra feita no(a):</strong></td>
-            <td>'.htmlspecialchars($expense['paid_to']).'</td>
+            <td>'.htmlspecialchars($expense['paid_to'] ?? '').'</td>
         </tr>
         <tr>
             <td><strong>Irmão responsável:</strong></td>
-            <td>'.htmlspecialchars($expense['received_by']).'</td>
+            <td>'.htmlspecialchars($expense['received_by'] ?? '').'</td>
         </tr>
         <tr>
             <td><strong>Data:</strong></td>
@@ -132,25 +124,27 @@ $html = '
             </tr>
         </thead>
         <tbody>';
-            foreach ($items as $item) {
-                $html .= '<tr>
-                    <td>'.htmlspecialchars($item['description']).'</td>
-                    <td style="text-align:center;">'.number_format($item['unit_price'], 2, ',', '.').'</td>
-                    <td style="text-align:center;">'.$item['quantity'].'</td>
-                    <td style="text-align:right;">'.number_format($item['total'], 2, ',', '.').'</td>
-                </tr>';
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    $html .= '<tr>
+                        <td>'.htmlspecialchars($item['description'] ?? '').'</td>
+                        <td style="text-align:center;">'.number_format($item['unit_price'] ?? 0, 2, ',', '.').'</td>
+                        <td style="text-align:center;">'.($item['quantity'] ?? 1).'</td>
+                        <td style="text-align:right;">'.number_format($item['total'] ?? 0, 2, ',', '.').'</td>
+                    </tr>';
+                }
             }
         $html .= '
             <tr class="total-row">
                 <td colspan="3" style="text-align:right;"><strong>Total Pago:</strong></td>
-                <td style="text-align:right;"><strong>'.number_format($expense['amount'], 2, ',', '.').' MZN</strong></td>
+                <td style="text-align:right;"><strong>'.number_format($expense['amount'] ?? 0, 2, ',', '.').' MZN</strong></td>
             </tr>
         </tbody>
     </table>
     
     <div class="footer">
         <strong>Comentários:</strong>
-        <p>'.nl2br(htmlspecialchars($expense['comments'] ?: 'Nenhum comentário.')).'</p>
+        <p>'.nl2br(htmlspecialchars($expense['comments'] ?? 'Nenhum comentário.')).'</p>
     </div>
 
     <table class="signatures">
@@ -161,7 +155,7 @@ $html = '
             </td>
             <td>
                 <div class="line"></div>
-                <p>'.htmlspecialchars($expense['received_by']).'</p>
+                <p>'.htmlspecialchars($expense['received_by'] ?? '').'</p>
             </td>
         </tr>
     </table>
