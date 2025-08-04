@@ -48,6 +48,22 @@ try {
     die("Erro: " . $e->getMessage());
 }
 
+// *** ABORDAGEM DE DIAGNÓSTICO ***
+// 1. Tenta encontrar o caminho absoluto e canónico para a imagem.
+$logoPath = realpath(__DIR__ . '/../assets/images/Church-1.png');
+$logoSrc = '';
+
+// 2. Verificação de Diagnóstico: Se o caminho não for encontrado ou o ficheiro não existir, o script para.
+if (!$logoPath || !file_exists($logoPath)) {
+    // Esta mensagem de erro ajudará a perceber o problema.
+    die("ERRO DE DIAGNÓSTICO: A imagem do logo não foi encontrada. O sistema tentou carregar a imagem a partir do seguinte caminho: " . htmlspecialchars(__DIR__ . '/../assets/images/Church-1.png') . ". Por favor, verifique se o ficheiro existe neste local e se o PHP tem permissões para o ler.");
+}
+
+// 3. Se o ficheiro for encontrado, converte-o para Base64 para o embutir no PDF.
+$imageData = base64_encode(file_get_contents($logoPath));
+$logoSrc = "data:image/png;base64,{$imageData}";
+
+
 // Criar instância do mPDF
 $mpdf = new \Mpdf\Mpdf([
     'mode' => 'utf-8',
@@ -82,7 +98,7 @@ $html = '
 </head>
 <body>
     <div class="header">
-        <img src="../assets/images/Church-1.png" alt="Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
+        <img src="' . $logoSrc . '" alt="Logo" style="width: 80px; height: auto; margin-bottom: 10px;">
         <h2>Igreja Comunidade de Vida Cristã</h2>
         <p>'.htmlspecialchars($expense['church_name']).'</p>
     </div>

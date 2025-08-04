@@ -1,7 +1,7 @@
 -- SQL para criação do banco de dados e tabelas para o sistema Life Church
 
-CREATE DATABASE IF NOT EXISTS lifechurch_db;
-USE lifechurch_db;
+CREATE DATABASE IF NOT EXISTS lifechurchfinanc_lifechurch_db;
+USE lifechurchfinanc_lifechurch_db;
 
 -- Tabela de Igrejas
 CREATE TABLE IF NOT EXISTS churches (

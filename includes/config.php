@@ -11,7 +11,7 @@
 // Substitua pelo URL que você usa no seu navegador para aceder ao projeto.
 // Certifique-se de que NÃO termina com uma barra (/).
 // Exemplo: http://localhost/lifechurch  ou  http://localhost:8080/lifechurch
-define('BASE_URL', 'http://localhost/lifechurch');
+define('BASE_URL', 'http://localhost/lifechurchfinanc');
 
 
 
@@ -32,7 +32,7 @@ define('DB_USERNAME', 'root');
 define('DB_PASSWORD', '');
 
 // Nome do banco de dados que você criou
-define('DB_NAME', 'lifechurch_db');
+define('DB_NAME', 'lifechurchfinanc_lifechurch_db');
 
 
 /**
