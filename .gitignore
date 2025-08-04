@@ -1,12 +1,24 @@
-# Ficheiros de configuração específicos do ambiente (local vs. produção)
-# Estes ficheiros não devem estar no repositório.
+# Ficheiros de configuração com senhas
+# Estes ficheiros contêm dados sensíveis e NUNCA devem ir para o repositório.
+includes/config.php
+includes/config cloud.php
 
+# Pasta de dependências do Composer
+# Esta pasta é gerada automaticamente com o comando 'composer install'.
+# Ignorá-la torna o seu repositório muito mais leve.
+/vendor/
 
-# Ignorar a pasta de dependências do Composer.
-# Elas devem ser instaladas no servidor com "composer install".
+# Ficheiros de backup ou cópias temporárias
+# Ignora ficheiros como "export_report copy.php".
+* copy.php
 
+# Ficheiros de log e temporários que podem ser gerados
+*.log
+*.tmp
+*.temp
 
-
-
-
-# Ignorar pastas de logs e ficheiros temporários
+# Pastas de configuração de Editores de Código (boa prática)
+.vscode/
+.idea/
+.project
+.settings
