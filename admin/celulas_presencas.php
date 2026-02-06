@@ -461,16 +461,15 @@ $conn->close();
                             </div>
                         </div>
 
-                        <!-- Sticky Footer Navigation -->
-                        <!-- Sticky Footer Navigation -->
-                        <div class="fixed bottom-[4rem] left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-40 lg:relative lg:bg-transparent lg:shadow-none lg:border-none lg:p-0 lg:mt-6 lg:bottom-0 flex justify-between items-center gap-4">
-                             <button type="button" id="prev-step-btn" class="hidden text-gray-600 font-medium py-3 px-6 rounded-xl hover:bg-gray-100 transition-colors flex-1 lg:flex-none">
-                                 Voltar
+                        <!-- Form Navigation Buttons - Only shows within form context -->
+                        <div id="form-nav-buttons" class="mt-6 pb-24 lg:pb-0 flex justify-center items-center gap-3">
+                             <button type="button" id="prev-step-btn" class="hidden text-gray-600 font-medium py-2.5 px-5 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200 bg-white">
+                                 <i class="ri-arrow-left-line mr-1"></i> Voltar
                              </button>
-                             <button type="button" id="next-step-btn" class="bg-primary text-white font-bold py-3 px-8 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30 flex-1 lg:flex-none text-center">
-                                 Próximo Passo
+                             <button type="button" id="next-step-btn" class="bg-primary text-white font-bold py-2.5 px-6 rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/30 text-center">
+                                 Próximo Passo <i class="ri-arrow-right-line ml-1"></i>
                              </button>
-                             <button type="submit" id="submit-btn" class="hidden bg-green-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-500/30 flex-1 lg:flex-none flex items-center justify-center">
+                             <button type="submit" id="submit-btn" class="hidden bg-green-600 text-white font-bold py-2.5 px-6 rounded-xl hover:bg-green-700 transition-all shadow-lg shadow-green-500/30 items-center justify-center">
                                 <i class="ri-check-double-line mr-2"></i> Finalizar
                             </button>
                         </div>
@@ -487,20 +486,24 @@ $conn->close();
                         }
                     </style>
 
-                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <div class="bg-white p-6 rounded-lg shadow-lg mb-24 lg:mb-0">
                         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                             <h3 class="text-xl font-bold text-gray-800">Registos de <?php echo date('F, Y', strtotime($selected_month)); ?></h3>
-                            <form method="get" class="flex items-center gap-2">
+                            <form method="get" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                                 <?php if($user_role === 'master_admin'): ?>
                                     <input type="hidden" name="celula_id" value="<?php echo $celula['id']; ?>">
                                 <?php endif; ?>
-                                <label for="mes" class="text-sm font-medium">Mês:</label>
-                                <input type="month" id="mes" name="mes" value="<?php echo $selected_month; ?>" class="p-2 border rounded-md">
-                                <button type="submit" class="bg-primary text-white py-2 px-4 rounded-button hover:bg-blue-700">Filtrar</button>
-                                <a href="export_celula_report.php?celula_id=<?php echo $celula['id']; ?>&mes=<?php echo $selected_month; ?>" target="_blank" class="bg-gray-600 text-white py-2 px-4 rounded-button hover:bg-gray-700 text-sm font-medium flex items-center gap-2">
-                                    <i class="ri-file-pdf-2-line"></i>
-                                    <span>Exportar Mês</span>
-                                </a>
+                                <div class="flex items-center gap-2">
+                                    <label for="mes" class="text-sm font-medium whitespace-nowrap">Mês:</label>
+                                    <input type="month" id="mes" name="mes" value="<?php echo $selected_month; ?>" class="p-2 border rounded-md flex-1">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="bg-primary text-white py-2 px-4 rounded-button hover:bg-blue-700 flex-1 sm:flex-none">Filtrar</button>
+                                    <a href="export_celula_report.php?celula_id=<?php echo $celula['id']; ?>&mes=<?php echo $selected_month; ?>" target="_blank" class="bg-gray-600 text-white py-2 px-4 rounded-button hover:bg-gray-700 text-sm font-medium flex items-center justify-center gap-2 flex-1 sm:flex-none">
+                                        <i class="ri-file-pdf-2-line"></i>
+                                        <span>Exportar</span>
+                                    </a>
+                                </div>
                             </form>
                         </div>
                         <div id="monthly-records-container" class="space-y-3">
@@ -781,38 +784,43 @@ $conn->close();
 
         // --- LÓGICA DO FORMULÁRIO ---
         function resetForm() {
-            activityForm.reset();
-            recordIdInput.value = '';
-            formTitle.textContent = `Novo Registo para a Célula "<?php echo htmlspecialchars($celula['nome'] ?? ''); ?>"`;
-            submitBtn.textContent = 'Guardar Registo';
-            cancelEditBtn.classList.add('hidden');
-            document.getElementById('visitors-container').innerHTML = '';
-            document.getElementById('candidates-container').innerHTML = '';
+            if(activityForm) activityForm.reset();
+            if(recordIdInput) recordIdInput.value = '';
+            if(formTitle) formTitle.textContent = `Novo Registo para a Célula "<?php echo htmlspecialchars($celula['nome'] ?? ''); ?>"`;
+            if(submitBtn) submitBtn.textContent = 'Guardar Registo';
+            if(cancelEditBtn) cancelEditBtn.classList.add('hidden');
+            const visitorsContainer = document.getElementById('visitors-container');
+            const candidatesContainer = document.getElementById('candidates-container');
+            if(visitorsContainer) visitorsContainer.innerHTML = '';
+            if(candidatesContainer) candidatesContainer.innerHTML = '';
             document.querySelectorAll('input[data-type="motivo"]').forEach(input => input.classList.add('hidden'));
-            document.querySelector('input[name="tipo_registo"][value="celula"]').dispatchEvent(new Event('change'));
+            const tipoRegistoInput = document.querySelector('input[name="tipo_registo"][value="celula"]');
+            if(tipoRegistoInput) tipoRegistoInput.dispatchEvent(new Event('change'));
         }
 
-        cancelEditBtn.addEventListener('click', resetForm);
+        if(cancelEditBtn) cancelEditBtn.addEventListener('click', resetForm);
 
         // --- Lógica para Presente vs Ausente ---
-        participationContainer.addEventListener('change', (e) => {
-            const memberRow = e.target.closest('[data-member-id]');
-            if (!memberRow) return;
+        if(participationContainer) {
+            participationContainer.addEventListener('change', (e) => {
+                const memberRow = e.target.closest('[data-member-id]');
+                if (!memberRow) return;
 
-            const presenteCheckbox = memberRow.querySelector('input[data-type="presente"]');
-            const ausenteCheckbox = memberRow.querySelector('input[data-type="ausente"]');
-            const motivoInput = memberRow.querySelector('input[data-type="motivo"]');
+                const presenteCheckbox = memberRow.querySelector('input[data-type="presente"]');
+                const ausenteCheckbox = memberRow.querySelector('input[data-type="ausente"]');
+                const motivoInput = memberRow.querySelector('input[data-type="motivo"]');
 
-            if (e.target.dataset.type === 'ausente' && e.target.checked) {
-                if (presenteCheckbox) presenteCheckbox.checked = false;
-                motivoInput.classList.remove('hidden');
-            } else if (e.target.dataset.type === 'ausente' && !e.target.checked) {
-                motivoInput.classList.add('hidden');
-            } else if (e.target.dataset.type === 'presente' && e.target.checked) {
-                if (ausenteCheckbox) ausenteCheckbox.checked = false;
-                motivoInput.classList.add('hidden');
-            }
-        });
+                if (e.target.dataset.type === 'ausente' && e.target.checked) {
+                    if (presenteCheckbox) presenteCheckbox.checked = false;
+                    if(motivoInput) motivoInput.classList.remove('hidden');
+                } else if (e.target.dataset.type === 'ausente' && !e.target.checked) {
+                    if(motivoInput) motivoInput.classList.add('hidden');
+                } else if (e.target.dataset.type === 'presente' && e.target.checked) {
+                    if (ausenteCheckbox) ausenteCheckbox.checked = false;
+                    if(motivoInput) motivoInput.classList.add('hidden');
+                }
+            });
+        }
 
         // --- Lógica para alternar formulário Célula/Culto ---
         document.querySelectorAll('input[name="tipo_registo"]').forEach(radio => {
@@ -853,32 +861,41 @@ $conn->close();
         // --- Lógica para Guardar/Atualizar o Formulário ---
         activityForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('=== FORM SUBMIT TRIGGERED ===');
+            
             const isEditing = !!recordIdInput.value;
+            console.log('Is Editing:', isEditing);
 
             const participations = Array.from(document.querySelectorAll('#participation-container > div[data-member-id]')).map(row => ({
                 member_id: row.dataset.memberId,
                 presente: row.querySelector('input[data-type="presente"]').checked,
                 ausente: row.querySelector('input[data-type="ausente"]').checked,
-                motivo: row.querySelector('input[data-type="motivo"]').value,
-                discipulado: row.querySelector('input[data-type="discipulado"]').checked,
-                pastoral: row.querySelector('input[data-type="pastoral"]').checked,
+                motivo: row.querySelector('input[data-type="motivo"]')?.value || '',
+                discipulado: row.querySelector('input[data-type="discipulado"]')?.checked || false,
+                pastoral: row.querySelector('input[data-type="pastoral"]')?.checked || false,
             }));
+            console.log('Participations:', participations);
+            
             const visitors = Array.from(document.querySelectorAll('.visitor-row')).map(row => ({
-                nome: row.querySelector('.visitor-name').value,
-                contacto: row.querySelector('.visitor-contact').value,
-                outros: row.querySelector('.visitor-other').value
+                nome: row.querySelector('.visitor-name')?.value || '',
+                contacto: row.querySelector('.visitor-contact')?.value || '',
+                outros: row.querySelector('.visitor-other')?.value || ''
             })).filter(v => v.nome);
+            console.log('Visitors:', visitors);
 
             const candidates = Array.from(document.querySelectorAll('.candidate-row')).map(row => ({
-                member_id: row.querySelector('.candidate-name').value,
-                salvacao: row.querySelector('.candidate-salvation').checked,
-                batismo_agua: row.querySelector('.candidate-water').checked,
-                batismo_espirito: row.querySelector('.candidate-spirit').checked
+                member_id: row.querySelector('.candidate-name')?.value || '',
+                salvacao: row.querySelector('.candidate-salvation')?.checked || false,
+                batismo_agua: row.querySelector('.candidate-water')?.checked || false,
+                batismo_espirito: row.querySelector('.candidate-spirit')?.checked || false
             })).filter(c => c.member_id);
+            console.log('Candidates:', candidates);
+            
             const events = {};
             document.querySelectorAll('.event-input').forEach(input => {
                 if (input.value) events[input.dataset.type] = input.value;
             });
+            console.log('Events:', events);
 
             const formData = new FormData();
             formData.append('action', isEditing ? 'update_activity' : 'save_activity');
@@ -890,10 +907,19 @@ $conn->close();
             formData.append('visitantes', JSON.stringify(visitors));
             formData.append('candidatos', JSON.stringify(candidates));
             formData.append('eventos', JSON.stringify(events));
+            
+            console.log('Celula ID:', celulaId);
+            console.log('Data Registo:', document.getElementById('data_registo').value);
+            console.log('Tipo Registo:', document.querySelector('input[name="tipo_registo"]:checked')?.value);
+            console.log('Sending data to server...');
 
             fetch('celulas_presencas.php', { method: 'POST', body: formData })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('Server response:', data);
                 if (data.success) {
                     showNotification(data.message, 'success');
                     setTimeout(() => window.location.reload(), 1500);
