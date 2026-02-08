@@ -154,18 +154,56 @@ function getInitials($name) {
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col bg-[#f8fafc] antialiased text-[#1a1a1a]">
+<body class="min-h-screen flex flex-col lg:flex-row bg-[#f8fafc] antialiased text-[#1a1a1a]">
 
-    <main class="flex-1 max-w-2xl mx-auto w-full px-4 pt-6 pb-32">
+<?php if ($user_role === 'lider'): ?>
+    <!-- ==================== SIDEBAR DESKTOP ==================== -->
+    <aside class="hidden lg:flex w-72 bg-white border-r border-gray-100 flex-col h-screen sticky top-0">
+        <div class="p-8 flex items-center gap-4">
+            <span class="text-2xl font-bold italic text-primary">Life Church</span>
+        </div>
+        <nav class="flex-1 px-4 space-y-2">
+            <a class="flex items-center gap-4 px-4 py-4 text-gray-400 hover:text-primary hover:bg-gray-50 transition-colors font-medium rounded-2xl" href="celulas.php">
+                <span class="material-symbols-outlined">groups</span>
+                <span>Célula</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-4 text-gray-400 hover:text-primary hover:bg-gray-50 transition-colors font-medium rounded-2xl" href="celulas_presencas.php<?php if($celula_id) echo '?celula_id='.$celula_id; ?>">
+                <span class="material-symbols-outlined">assignment</span>
+                <span>Atividades</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-4 text-primary bg-primaryLight/50 font-semibold rounded-2xl" href="settings.php">
+                <span class="material-symbols-outlined">settings</span>
+                <span>Definições</span>
+            </a>
+        </nav>
+        <div class="p-6 mt-auto border-t border-gray-50">
+            <div class="flex items-center gap-4 p-2">
+                <div class="w-12 h-12 rounded-2xl bg-primaryLight flex items-center justify-center text-primary font-bold text-lg">
+                    <?php echo getInitials($user_name); ?>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold truncate"><?php echo htmlspecialchars(explode(' ', $user_name)[0]); ?></p>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Líder</p>
+                </div>
+                <a href="logout.php" class="text-gray-300 hover:text-red-500 transition-colors">
+                    <span class="material-symbols-outlined">logout</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+<?php endif; ?>
+
+    <!-- ==================== CONTEÚDO PRINCIPAL ==================== -->
+    <main class="flex-1 max-w-2xl mx-auto w-full px-4 lg:px-8 pt-6 lg:pt-8 pb-32 lg:pb-12">
         
         <!-- Header -->
-        <header class="flex items-center gap-4 mb-6">
+        <header class="flex items-center gap-4 mb-6 lg:mb-8">
             <?php if ($user_role !== 'lider'): ?>
             <a href="dashboard.php" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
                 <span class="material-symbols-outlined text-2xl text-gray-600">arrow_back</span>
             </a>
             <?php endif; ?>
-            <h1 class="text-xl font-bold text-[#1a1a1a]">Definições</h1>
+            <h1 class="text-xl lg:text-2xl font-bold text-[#1a1a1a]">Definições</h1>
         </header>
 
         <?php if ($message): ?>
@@ -297,10 +335,15 @@ function getInitials($name) {
                     <span class="material-symbols-outlined text-green-600 text-2xl mb-2">verified</span>
                     <p class="text-sm text-green-700 font-medium">Aplicação já instalada!</p>
                 </div>
+                
+                <div id="desktop-hint" class="hidden lg:block bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
+                    <span class="material-symbols-outlined text-gray-500 text-2xl mb-2">computer</span>
+                    <p class="text-sm text-gray-600">A instalação PWA está disponível apenas em dispositivos móveis.</p>
+                </div>
             </div>
 
-            <!-- Logout Button -->
-            <a href="logout.php" class="w-full bg-red-50 text-red-600 font-bold py-4 rounded-xl border-2 border-red-100 hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
+            <!-- Logout Button (Mobile only - desktop has in sidebar) -->
+            <a href="logout.php" class="lg:hidden w-full bg-red-50 text-red-600 font-bold py-4 rounded-xl border-2 border-red-100 hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
                 <span class="material-symbols-outlined">logout</span>
                 Sair
             </a>
@@ -312,6 +355,7 @@ function getInitials($name) {
                 e.preventDefault();
                 deferredPrompt = e;
                 document.getElementById('pwa-install-btn').style.display = 'flex';
+                document.getElementById('desktop-hint').style.display = 'none';
             });
 
             function installPWA() {
@@ -333,8 +377,10 @@ function getInitials($name) {
             
             if (isStandalone) {
                 document.getElementById('already-installed').style.display = 'block';
+                document.getElementById('desktop-hint').style.display = 'none';
             } else if (isIOS) {
                 document.getElementById('ios-install-hint').style.display = 'block';
+                document.getElementById('desktop-hint').style.display = 'none';
             }
             </script>
         <?php endif; ?>
@@ -343,7 +389,7 @@ function getInitials($name) {
 
     <?php if ($user_role === 'lider'): ?>
         <!-- Mobile Bottom Navigation for Leaders -->
-        <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-4 pb-8 z-50">
+        <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-4 pb-8 z-50">
             <a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="celulas.php">
                 <span class="material-symbols-outlined text-2xl">groups</span>
                 <span class="text-[10px] font-bold uppercase tracking-wider">Célula</span>

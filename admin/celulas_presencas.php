@@ -199,62 +199,106 @@ $conn->close();
 <head>
     <?php require_once __DIR__ . '/../includes/pwa_head.php'; ?>
     <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Registo de Atividades da Célula - Life Church</title>
-    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
-    <script>
-      tailwind.config = { theme: { extend: { colors: { primary: "#1976D2", secondary: "#BBDEFB" }, borderRadius: { button: "8px" } } } };
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Pacifico&display=swap" rel="stylesheet"/>
+    <title>Registo de Atividades - Life Church</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css"/>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1d72e8",
+                        primaryLight: "#eef2ff",
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft-xl': '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)',
+                        'card': '0 4px 20px rgba(0, 0, 0, 0.04)',
+                    },
+                },
+            },
+        };
+    </script>
     <style>
-      body { font-family: 'Roboto', sans-serif; background-color: #f9fafb; }
-      .sidebar-item.active { background-color: #E3F2FD; color: #1976D2; font-weight: 500; }
-      .sidebar-item.active::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 3px; background-color: #1976D2; }
-      .form-section { border-left: 3px solid #1976D2; }
-      .notification { transition: opacity 0.5s, transform 0.5s; }
-      .modal { transition: opacity 0.3s ease; }
-      .modal-content { transition: transform 0.3s ease, opacity 0.3s ease; }
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .sidebar-item.active { background-color: rgba(29, 114, 232, 0.1); color: #1d72e8; font-weight: 600; }
+        .form-section { border-left: 3px solid #1d72e8; }
+        .notification { transition: opacity 0.5s, transform 0.5s; }
+        .modal { transition: opacity 0.3s ease; }
+        .modal-content { transition: transform 0.3s ease, opacity 0.3s ease; }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div class="lg:flex">
-        <aside id="sidebar" class="w-64 h-screen bg-white border-r border-gray-200 flex-shrink-0 flex flex-col fixed lg:sticky top-0 z-40 transform -translate-x-full lg:translate-x-0">
-             <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-                 <span class="text-2xl font-['Pacifico'] text-primary">Life Church</span>
-                  <button id="close-sidebar-btn" class="lg:hidden text-gray-500 hover:text-gray-800"><i class="ri-close-line ri-xl"></i></button>
-             </div>
-             <nav class="flex-1 overflow-y-auto py-4">
-                <div class="px-4 mb-6"><p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Menu Principal</p>
-                    <?php if (isset($_SESSION['user_role']) && in_array($_SESSION['user_role'], ['lider', 'master_admin'])): ?>
-                        <a href="celulas.php" class="sidebar-item relative flex items-center px-4 py-3 text-gray-600 rounded-lg mb-1"><i class="ri-group-2-line ri-lg mr-3"></i><span>Minha Célula</span></a>
-                        <a href="celulas_presencas.php<?php if($user_role === 'master_admin' && $celula) echo '?celula_id='.$celula['id']; ?>" class="sidebar-item relative flex items-center px-4 py-3 text-gray-600 rounded-lg mb-1 <?php echo $currentPage === 'celulas_presencas.php' ? 'active' : ''; ?>"><i class="ri-file-list-3-line ri-lg mr-3"></i><span>Registar Atividades</span></a>
-                    <?php endif; ?>
+<body class="min-h-screen flex flex-col lg:flex-row bg-[#f8fafc] antialiased text-[#1a1a1a]">
+    
+    <?php if ($user_role === 'lider'): ?>
+    <!-- ==================== SIDEBAR DESKTOP ==================== -->
+    <aside class="hidden lg:flex w-72 bg-white border-r border-gray-100 flex-col h-screen sticky top-0">
+        <div class="p-8 flex items-center gap-4">
+            <span class="text-2xl font-bold italic text-primary">Life Church</span>
+        </div>
+        <nav class="flex-1 px-4 space-y-2">
+            <a class="flex items-center gap-4 px-4 py-4 text-gray-400 hover:text-primary hover:bg-gray-50 transition-colors font-medium rounded-2xl" href="celulas.php">
+                <span class="material-symbols-outlined">groups</span>
+                <span>Célula</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-4 text-primary bg-primaryLight/50 font-semibold rounded-2xl" href="celulas_presencas.php<?php if($celula) echo '?celula_id='.$celula['id']; ?>">
+                <span class="material-symbols-outlined">assignment</span>
+                <span>Atividades</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-4 text-gray-400 hover:text-primary hover:bg-gray-50 transition-colors font-medium rounded-2xl" href="settings.php">
+                <span class="material-symbols-outlined">settings</span>
+                <span>Definições</span>
+            </a>
+        </nav>
+        <div class="p-6 mt-auto border-t border-gray-50">
+            <div class="flex items-center gap-4 p-2">
+                <div class="w-12 h-12 rounded-2xl bg-primaryLight flex items-center justify-center text-primary font-bold text-lg">
+                    <?php echo strtoupper(substr($_SESSION['user_name'] ?? 'U', 0, 2)); ?>
                 </div>
-                <div class="px-4"><p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Sistema</p>
-                    <a href="settings.php" class="sidebar-item relative flex items-center px-4 py-3 text-gray-600 rounded-lg mb-1 hover:bg-gray-100"><i class="ri-settings-3-line ri-lg mr-3"></i><span>Definições</span></a>
-                    <a href="logout.php" class="sidebar-item relative flex items-center px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-100"><i class="ri-logout-box-line ri-lg mr-3"></i><span>Sair</span></a>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold truncate"><?php echo htmlspecialchars(explode(' ', $_SESSION['user_name'] ?? '')[0]); ?></p>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Líder</p>
                 </div>
-             </nav>
-        </aside>
+                <a href="logout.php" class="text-gray-300 hover:text-red-500 transition-colors">
+                    <span class="material-symbols-outlined">logout</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+    <?php endif; ?>
 
-        <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
+    <div class="flex-1 flex flex-col w-full min-w-0">
+        <!-- Header -->
+        <header class="bg-white border-b border-gray-100 shadow-sm z-20 sticky top-0 px-4 lg:px-8 py-4">
+            <h1 class="text-xl lg:text-2xl font-bold text-[#1a1a1a]">Registo de Atividades</h1>
+        </header>
 
-        <div class="flex-1 flex flex-col w-full min-w-0">
-            <header class="bg-white border-b border-gray-200 shadow-sm z-20 sticky top-0"><div class="flex items-center justify-between h-16 px-6"><div class="flex items-center"><?php if($user_role !== 'lider'): ?><button id="open-sidebar-btn" class="lg:hidden mr-4 text-gray-600 hover:text-primary"><i class="ri-menu-line ri-lg"></i></button><?php endif; ?><h1 class="text-lg font-medium text-gray-800">Registo de Atividades da Célula</h1></div></div></header>
+        <main class="flex-1 p-4 lg:p-8 lg:pt-6 space-y-6 overflow-y-auto pb-32 lg:pb-8">
+            <div id="notification-container" class="fixed top-20 right-6 z-50 space-y-2"></div>
+            
+            <?php if ($error_message_display): ?>
+                <div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl flex items-center gap-3">
+                    <span class="material-symbols-outlined text-red-600">error</span>
+                    <p><?php echo htmlspecialchars($error_message_display); ?></p>
+                </div>
+            <?php endif; ?>
 
-            <main class="flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
-                <div id="notification-container" class="fixed top-20 right-6 z-50 space-y-2"></div>
-                
-                <?php if ($error_message_display): ?>
-                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow">
-                        <p><?php echo htmlspecialchars($error_message_display); ?></p>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (!$celula): ?>
-                    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-md shadow">
-                        <p>Nenhuma célula selecionada. Se você é um líder, certifique-se de que sua célula está registada. Se é administrador, selecione uma célula na página de gestão de células.</p>
-                    </div>
+            <?php if (!$celula): ?>
+                <div class="bg-yellow-50 border border-yellow-200 text-yellow-700 p-4 rounded-2xl flex items-center gap-3">
+                    <span class="material-symbols-outlined text-yellow-600">warning</span>
+                    <p>Nenhuma célula selecionada. Se você é um líder, certifique-se de que sua célula está registada.</p>
+                </div>
                 <?php else: ?>
                     <form id="activity-form" class="pb-20 lg:pb-0">
                         <input type="hidden" name="celula_id" value="<?php echo $celula['id']; ?>">
@@ -530,6 +574,24 @@ $conn->close();
             </main>
         </div>
     </div>
+    
+    <?php if ($user_role === 'lider' && $celula): ?>
+    <!-- Mobile Bottom Navigation for Leaders -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-4 pb-8 z-40">
+        <a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="celulas.php">
+            <span class="material-symbols-outlined text-2xl">groups</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">Célula</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-primary" href="celulas_presencas.php?celula_id=<?php echo $celula['id']; ?>">
+            <span class="material-symbols-outlined text-2xl">assignment</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">Atividades</span>
+        </a>
+        <a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="settings.php">
+            <span class="material-symbols-outlined text-2xl">settings</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">Definições</span>
+        </a>
+    </nav>
+    <?php endif; ?>
     
     <!-- Modal para Detalhes do Registo -->
     <div id="details-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">

@@ -86,14 +86,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $celula_id = (int)$_POST['celula_id'];
 
         if ($nome && $email) {
-            // Verificar se o líder é dono desta célula
             $stmt_verify = $conn->prepare("SELECT id FROM celulas WHERE id = ? AND lider_id = ?");
             $stmt_verify->bind_param("ii", $celula_id, $user_id);
             $stmt_verify->execute();
             $res_verify = $stmt_verify->get_result();
             
             if ($res_verify && $res_verify->num_rows > 0) {
-                // Verificar se email já existe
                 $stmt_check_email = $conn->prepare("SELECT id FROM users WHERE email = ?");
                 $stmt_check_email->bind_param("s", $email);
                 $stmt_check_email->execute();
@@ -102,7 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 if ($res_email->num_rows > 0) {
                     $error = "Este email já está registado no sistema.";
                 } else {
-                    // Criar novo membro com senha padrão
                     $senha_padrao = password_hash('123456', PASSWORD_DEFAULT);
                     $stmt_insert = $conn->prepare("INSERT INTO users (name, email, phone, password, role, church_id, celula_id, status) VALUES (?, ?, ?, ?, 'membro', ?, ?, 'approved')");
                     $stmt_insert->bind_param("ssssii", $nome, $email, $telefone, $senha_padrao, $church_id, $celula_id);
@@ -145,13 +142,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $stmt_assign->bind_param("iii", $celula_id_to_add, $user_id_to_add, $church_id);
                 if ($stmt_assign->execute()) {
                     $message = "Membro adicionado à célula com sucesso!";
-                } else {
-                    $error = "Erro ao adicionar membro à célula.";
                 }
                 $stmt_assign->close();
             }
-        } else {
-            $error = "Não tem permissão para adicionar membros a esta célula.";
         }
     }
     // --- Ação para REMOVER Membro da Célula ---
@@ -194,13 +187,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $stmt_remove->bind_param("i", $member_id_to_remove);
                 if ($stmt_remove->execute()) {
                     $message = "Membro removido da célula com sucesso!";
-                } else {
-                    $error = "Erro ao remover o membro da célula.";
                 }
                 $stmt_remove->close();
             }
+        }
+    }
+    // --- Ação para EDITAR/ATUALIZAR Membro ---
+    elseif ($action === 'update_member' && $user_role === 'lider') {
+        $member_id = (int)$_POST['member_id'];
+        $nome = trim($_POST['nome'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $telefone = trim($_POST['telefone'] ?? '');
+
+        if ($nome && $email && $member_id > 0) {
+            // Verificar se o membro pertence à célula do líder
+            $stmt_verify = $conn->prepare("SELECT u.id FROM users u JOIN celulas c ON u.celula_id = c.id WHERE u.id = ? AND c.lider_id = ?");
+            $stmt_verify->bind_param("ii", $member_id, $user_id);
+            $stmt_verify->execute();
+            $res_verify = $stmt_verify->get_result();
+            
+            if ($res_verify && $res_verify->num_rows > 0) {
+                // Verificar se o novo email não está em uso por outro utilizador
+                $stmt_check_email = $conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+                $stmt_check_email->bind_param("si", $email, $member_id);
+                $stmt_check_email->execute();
+                $res_email = $stmt_check_email->get_result();
+                
+                if ($res_email->num_rows > 0) {
+                    $error = "Este email já está em uso por outro utilizador.";
+                } else {
+                    $stmt_update = $conn->prepare("UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?");
+                    $stmt_update->bind_param("sssi", $nome, $email, $telefone, $member_id);
+                    
+                    if ($stmt_update->execute()) {
+                        $message = "Dados do membro atualizados com sucesso!";
+                    } else {
+                        $error = "Erro ao atualizar dados do membro.";
+                    }
+                }
+            } else {
+                $error = "Não tem permissão para editar este membro.";
+            }
         } else {
-            $error = "Não tem permissão para remover este membro.";
+            $error = "Nome e email são obrigatórios.";
         }
     }
 }
@@ -340,18 +369,58 @@ $avatar_colors = [
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col bg-[#f8fafc] antialiased text-[#1a1a1a]">
+<body class="min-h-screen flex flex-col lg:flex-row bg-[#f8fafc] antialiased text-[#1a1a1a]">
+
+<?php if ($user_role === 'lider'): ?>
+    <!-- ==================== SIDEBAR DESKTOP ==================== -->
+    <aside class="hidden lg:flex w-72 bg-white border-r border-gray-100 flex-col h-screen sticky top-0">
+        <div class="p-8 flex items-center gap-4">
+            <span class="text-2xl font-bold italic text-primary">Life Church</span>
+        </div>
+        <nav class="flex-1 px-4 space-y-2">
+            <a class="flex items-center gap-4 px-4 py-4 text-primary bg-primaryLight/50 font-semibold rounded-2xl" href="celulas.php">
+                <span class="material-symbols-outlined">groups</span>
+                <span>Célula</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-4 text-gray-400 hover:text-primary hover:bg-gray-50 transition-colors font-medium rounded-2xl" href="celulas_presencas.php<?php if($celula) echo '?celula_id='.$celula['id']; ?>">
+                <span class="material-symbols-outlined">assignment</span>
+                <span>Atividades</span>
+            </a>
+            <a class="flex items-center gap-4 px-4 py-4 text-gray-400 hover:text-primary hover:bg-gray-50 transition-colors font-medium rounded-2xl" href="settings.php">
+                <span class="material-symbols-outlined">settings</span>
+                <span>Definições</span>
+            </a>
+        </nav>
+        <div class="p-6 mt-auto border-t border-gray-50">
+            <div class="flex items-center gap-4 p-2">
+                <div class="w-12 h-12 rounded-2xl bg-primaryLight flex items-center justify-center text-primary font-bold text-lg">
+                    <?php echo getInitials($user_name); ?>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-bold truncate"><?php echo htmlspecialchars(explode(' ', $user_name)[0]); ?></p>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Líder</p>
+                </div>
+                <a href="logout.php" class="text-gray-300 hover:text-red-500 transition-colors">
+                    <span class="material-symbols-outlined">logout</span>
+                </a>
+            </div>
+        </div>
+    </aside>
+<?php endif; ?>
 
 <?php if ($user_role === 'lider' && $celula): ?>
-    <!-- ==================== LAYOUT PARA LÍDER COM CÉLULA ==================== -->
-    <main class="flex-1 max-w-2xl mx-auto w-full px-4 pt-6 pb-32">
+    <!-- ==================== CONTEÚDO PRINCIPAL (LÍDER COM CÉLULA) ==================== -->
+    <main class="flex-1 max-w-5xl mx-auto w-full px-4 lg:px-8 pt-6 lg:pt-8 pb-32 lg:pb-12">
         
         <!-- Header -->
-        <header class="flex justify-between items-center mb-6">
+        <header class="flex justify-between items-center mb-6 lg:mb-8">
             <div class="flex flex-col">
                 <span class="text-gray-400 text-sm font-medium leading-none mb-1">Bem-vindo,</span>
-                <h2 class="text-2xl lg:text-3xl font-extrabold text-[#1a1a1a] leading-tight">Gestão de Células</h2>
+                <h2 class="text-2xl lg:text-4xl font-extrabold text-[#1a1a1a] leading-tight">Gestão de Células</h2>
             </div>
+            <button class="hidden lg:flex p-3 bg-white rounded-2xl shadow-card border border-gray-50 text-gray-400 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">notifications</span>
+            </button>
         </header>
 
         <?php if ($message): ?>
@@ -370,25 +439,35 @@ $avatar_colors = [
         <!-- Card do Líder -->
         <div class="bg-white rounded-[32px] shadow-soft-xl border border-gray-50 p-6 lg:p-8 mb-8 relative overflow-hidden">
             <div class="relative z-10">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-primary text-[10px] font-black uppercase tracking-[0.2em]">Líder da Célula</span>
-                    <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-primary">
-                        <span class="material-symbols-outlined">verified</span>
+                <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-primary text-[10px] font-black uppercase tracking-[0.2em]">Líder da Célula</span>
+                            <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined">verified</span>
+                            </div>
+                        </div>
+                        <h3 class="text-2xl lg:text-4xl font-extrabold text-[#1a1a1a] mb-5"><?php echo htmlspecialchars($user_name); ?></h3>
+                        <div class="flex flex-wrap gap-3 lg:gap-4">
+                            <div class="flex items-center gap-2 px-4 py-2 bg-[#f8fafc] rounded-xl border border-gray-100">
+                                <span class="material-symbols-outlined text-primary text-xl">calendar_month</span>
+                                <span class="text-gray-600 text-sm font-semibold"><?php echo htmlspecialchars($celula['dia_encontro'] ?? 'N/A'); ?></span>
+                            </div>
+                            <div class="flex items-center gap-2 px-4 py-2 bg-[#f8fafc] rounded-xl border border-gray-100">
+                                <span class="material-symbols-outlined text-primary text-xl">schedule</span>
+                                <span class="text-gray-600 text-sm font-semibold"><?php echo htmlspecialchars($celula['horario'] ?? 'N/A'); ?></span>
+                            </div>
+                            <div class="flex items-center gap-2 px-4 py-2 bg-[#f8fafc] rounded-xl border border-gray-100">
+                                <span class="material-symbols-outlined text-primary text-xl">location_on</span>
+                                <span class="text-gray-600 text-sm font-semibold"><?php echo htmlspecialchars($celula['endereco'] ?? 'N/A'); ?></span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <h3 class="text-2xl lg:text-3xl font-extrabold text-[#1a1a1a] mb-5"><?php echo htmlspecialchars($user_name); ?></h3>
-                <div class="flex flex-wrap gap-3">
-                    <div class="flex items-center gap-2 px-4 py-2 bg-[#f8fafc] rounded-xl border border-gray-100">
-                        <span class="material-symbols-outlined text-primary text-xl">calendar_month</span>
-                        <span class="text-gray-600 text-sm font-semibold"><?php echo htmlspecialchars($celula['dia_encontro'] ?? 'N/A'); ?></span>
-                    </div>
-                    <div class="flex items-center gap-2 px-4 py-2 bg-[#f8fafc] rounded-xl border border-gray-100">
-                        <span class="material-symbols-outlined text-primary text-xl">schedule</span>
-                        <span class="text-gray-600 text-sm font-semibold"><?php echo htmlspecialchars($celula['horario'] ?? 'N/A'); ?></span>
-                    </div>
-                    <div class="flex items-center gap-2 px-4 py-2 bg-[#f8fafc] rounded-xl border border-gray-100">
-                        <span class="material-symbols-outlined text-primary text-xl">location_on</span>
-                        <span class="text-gray-600 text-sm font-semibold"><?php echo htmlspecialchars($celula['endereco'] ?? 'N/A'); ?></span>
+                    <div class="w-full lg:w-auto">
+                        <a href="celulas_presencas.php?celula_id=<?php echo $celula['id']; ?>" class="w-full lg:w-auto bg-primary hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-3">
+                            <span class="material-symbols-outlined text-xl">assignment_add</span>
+                            <span>Lançar Relatório</span>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -396,9 +475,9 @@ $avatar_colors = [
 
         <!-- Secção de Membros -->
         <section>
-            <div class="flex items-baseline justify-between mb-5 px-1">
+            <div class="flex items-baseline justify-between mb-5 lg:mb-6 px-1">
                 <div class="flex items-center gap-3">
-                    <h3 class="text-xl font-extrabold text-[#1a1a1a]">Membros</h3>
+                    <h3 class="text-xl lg:text-2xl font-extrabold text-[#1a1a1a]">Membros</h3>
                     <span class="bg-gray-100 text-[#1a1a1a] text-xs font-bold px-3 py-1 rounded-full"><?php echo count($membros_celula); ?></span>
                 </div>
             </div>
@@ -412,11 +491,11 @@ $avatar_colors = [
                     <p class="text-sm text-gray-500">Clique no botão abaixo para adicionar o primeiro membro à sua célula.</p>
                 </div>
             <?php else: ?>
-                <div class="grid grid-cols-1 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                     <?php foreach ($membros_celula as $index => $membro): 
                         $color = $avatar_colors[$index % count($avatar_colors)];
                     ?>
-                        <div class="bg-white rounded-[24px] p-5 shadow-card border border-gray-50 flex items-center gap-4 relative">
+                        <div class="bg-white rounded-[24px] p-5 lg:p-6 shadow-card border border-gray-50 flex items-center gap-4 relative">
                             <div class="w-14 h-14 rounded-2xl <?php echo $color['bg']; ?> <?php echo $color['text']; ?> flex items-center justify-center font-extrabold text-lg shrink-0">
                                 <?php echo getInitials($membro['name']); ?>
                             </div>
@@ -440,13 +519,18 @@ $avatar_colors = [
                                     <?php endif; ?>
                                 </div>
                             </div>
-                            <form method="POST" class="shrink-0" onsubmit="return confirm('Tem certeza que deseja remover este membro?')">
-                                <input type="hidden" name="action" value="remove_member">
-                                <input type="hidden" name="member_id_remove" value="<?php echo $membro['id']; ?>">
-                                <button type="submit" class="flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors p-2 rounded-xl hover:bg-red-50">
-                                    <span class="material-symbols-outlined text-xl">person_remove</span>
+                            <div class="flex flex-col gap-1 shrink-0">
+                                <button type="button" onclick="openEditMemberModal(<?php echo $membro['id']; ?>, '<?php echo htmlspecialchars(addslashes($membro['name'])); ?>', '<?php echo htmlspecialchars(addslashes($membro['email'])); ?>', '<?php echo htmlspecialchars(addslashes($membro['phone'] ?? '')); ?>')" class="flex items-center justify-center text-gray-300 hover:text-primary transition-colors p-2 rounded-xl hover:bg-blue-50">
+                                    <span class="material-symbols-outlined text-xl">edit</span>
                                 </button>
-                            </form>
+                                <form method="POST" class="inline" onsubmit="return confirm('Tem certeza que deseja remover este membro?')">
+                                    <input type="hidden" name="action" value="remove_member">
+                                    <input type="hidden" name="member_id_remove" value="<?php echo $membro['id']; ?>">
+                                    <button type="submit" class="flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors p-2 rounded-xl hover:bg-red-50">
+                                        <span class="material-symbols-outlined text-xl">person_remove</span>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -454,7 +538,7 @@ $avatar_colors = [
         </section>
 
         <!-- Botão Flutuante de Adicionar Membro -->
-        <div class="fixed bottom-24 right-4 z-40">
+        <div class="fixed bottom-24 lg:bottom-12 right-4 lg:right-8 z-50">
             <button onclick="openAddMemberModal()" class="bg-primary hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-2xl shadow-primary/40 transition-all flex items-center gap-3 transform hover:scale-105 active:scale-95">
                 <span class="material-symbols-outlined text-2xl">add</span>
                 <span class="text-sm">Membro</span>
@@ -465,8 +549,8 @@ $avatar_colors = [
     <!-- Modal Adicionar Membro -->
     <div id="addMemberModal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeAddMemberModal()"></div>
-        <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-[32px] p-6 pb-10 max-h-[85vh] overflow-y-auto transform transition-transform">
-            <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6"></div>
+        <div class="absolute bottom-0 left-0 right-0 lg:bottom-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:max-w-md lg:w-full bg-white rounded-t-[32px] lg:rounded-[32px] p-6 pb-10 lg:pb-6 max-h-[85vh] overflow-y-auto transform transition-transform">
+            <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6 lg:hidden"></div>
             <h3 class="text-xl font-bold text-center mb-6">Adicionar Membro</h3>
             
             <form method="POST" class="space-y-4">
@@ -492,16 +576,21 @@ $avatar_colors = [
                     <span class="font-semibold">Nota:</span> O membro será criado com a senha padrão <strong>123456</strong>. Ele deverá alterar após o primeiro login.
                 </p>
                 
-                <button type="submit" class="w-full bg-primary hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined">person_add</span>
-                    Adicionar Membro
-                </button>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeAddMemberModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-4 rounded-xl transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 bg-primary hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined">person_add</span>
+                        Adicionar
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
-    <!-- Navegação Inferior -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-4 pb-8 z-40">
+    <!-- Navegação Inferior Mobile -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-4 pb-8 z-40">
         <a class="flex flex-col items-center gap-1 text-primary" href="celulas.php">
             <span class="material-symbols-outlined text-2xl">groups</span>
             <span class="text-[10px] font-bold uppercase tracking-wider">Célula</span>
@@ -516,6 +605,45 @@ $avatar_colors = [
         </a>
     </nav>
 
+    <!-- Modal Editar Membro -->
+    <div id="editMemberModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeEditMemberModal()"></div>
+        <div class="absolute bottom-0 left-0 right-0 lg:bottom-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:max-w-md lg:w-full bg-white rounded-t-[32px] lg:rounded-[32px] p-6 pb-10 lg:pb-6 max-h-[85vh] overflow-y-auto transform transition-transform">
+            <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6 lg:hidden"></div>
+            <h3 class="text-xl font-bold text-center mb-6">Editar Membro</h3>
+            
+            <form method="POST" class="space-y-4">
+                <input type="hidden" name="action" value="update_member">
+                <input type="hidden" name="member_id" id="edit_member_id">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nome completo *</label>
+                    <input type="text" name="nome" id="edit_member_nome" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                    <input type="email" name="email" id="edit_member_email" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
+                    <input type="text" name="telefone" id="edit_member_telefone" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary">
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeEditMemberModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-4 rounded-xl transition-colors">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="flex-1 bg-primary hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined">save</span>
+                        Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
     function openAddMemberModal() {
         document.getElementById('addMemberModal').classList.remove('hidden');
@@ -523,6 +651,18 @@ $avatar_colors = [
     }
     function closeAddMemberModal() {
         document.getElementById('addMemberModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    function openEditMemberModal(id, nome, email, telefone) {
+        document.getElementById('edit_member_id').value = id;
+        document.getElementById('edit_member_nome').value = nome;
+        document.getElementById('edit_member_email').value = email;
+        document.getElementById('edit_member_telefone').value = telefone;
+        document.getElementById('editMemberModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeEditMemberModal() {
+        document.getElementById('editMemberModal').classList.add('hidden');
         document.body.style.overflow = '';
     }
     </script>
@@ -586,9 +726,12 @@ $avatar_colors = [
 
 <?php elseif ($user_role === 'master_admin'): ?>
     <!-- ==================== LAYOUT PARA MASTER ADMIN ==================== -->
-    <main class="flex-1 max-w-4xl mx-auto w-full px-4 pt-6 pb-10">
+    <main class="flex-1 max-w-6xl mx-auto w-full px-4 lg:px-8 pt-6 lg:pt-8 pb-10">
         <header class="flex justify-between items-center mb-8">
             <h2 class="text-2xl lg:text-3xl font-extrabold text-[#1a1a1a]">Todas as Células</h2>
+            <a href="dashboard.php" class="text-primary hover:underline text-sm font-medium flex items-center gap-1">
+                <span class="material-symbols-outlined text-lg">arrow_back</span> Voltar
+            </a>
         </header>
 
         <?php if ($message): ?>
@@ -599,7 +742,7 @@ $avatar_colors = [
         <?php endif; ?>
 
         <?php if (!empty($lista_celulas)): ?>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                 <?php foreach ($lista_celulas as $cel): ?>
                     <a href="celulas.php?view_celula_id=<?php echo $cel['id']; ?>" class="bg-white rounded-[24px] p-6 shadow-card border border-gray-50 hover:border-primary/30 hover:shadow-lg transition-all block">
                         <h4 class="font-bold text-lg text-[#1a1a1a] mb-2"><?php echo htmlspecialchars($cel['nome']); ?></h4>
@@ -609,7 +752,6 @@ $avatar_colors = [
                 <?php endforeach; ?>
             </div>
         <?php elseif ($celula): ?>
-            <!-- Visualização de uma célula específica pelo admin -->
             <div class="bg-white rounded-[24px] p-6 shadow-card border border-gray-50 mb-6">
                 <a href="celulas.php" class="text-primary text-sm font-medium hover:underline mb-4 inline-flex items-center gap-1">
                     <span class="material-symbols-outlined text-lg">arrow_back</span> Voltar à lista
@@ -619,7 +761,7 @@ $avatar_colors = [
             </div>
             
             <?php if (!empty($membros_celula)): ?>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <?php foreach ($membros_celula as $index => $membro): 
                         $color = $avatar_colors[$index % count($avatar_colors)];
                     ?>
