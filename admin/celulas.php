@@ -21,12 +21,11 @@ $message = '';
 $error = '';
 $currentPage = basename($_SERVER['SCRIPT_NAME']);
 
-// --- LÓGICA AJAX ---
+// --- LÓGICA AJAX para buscar membros disponíveis ---
 if (isset($_GET['action']) && $_GET['action'] === 'get_available_members') {
     header('Content-Type: application/json');
     $search_term = isset($_GET['search']) ? '%' . $_GET['search'] . '%' : '%';
     
-    // Busca utilizadores da mesma igreja que ainda não estão numa célula
     $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE church_id = ? AND celula_id IS NULL AND (name LIKE ? OR email LIKE ?) LIMIT 1000");
     if ($stmt) {
         $stmt->bind_param("iss", $church_id, $search_term, $search_term);
@@ -40,7 +39,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_available_members') {
     $conn->close();
     exit;
 }
-
 
 // --- Lógica de Ações (POST) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -72,16 +70,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             $error = "Ocorreu um erro ao criar a sua célula.";
                         }
                         $stmt_create->close();
-                    } else {
-                         $error = "Erro ao preparar a criação da célula.";
                     }
                 }
                 $stmt_check->close();
-            } else {
-                 $error = "Erro ao verificar a existência da célula.";
             }
         } else {
             $error = "Por favor, preencha todos os campos para criar a sua célula.";
+        }
+    }
+    // --- Ação para REGISTAR um novo membro ---
+    elseif ($action === 'register_member' && $user_role === 'lider') {
+        $nome = trim($_POST['nome'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $telefone = trim($_POST['telefone'] ?? '');
+        $celula_id = (int)$_POST['celula_id'];
+
+        if ($nome && $email) {
+            // Verificar se o líder é dono desta célula
+            $stmt_verify = $conn->prepare("SELECT id FROM celulas WHERE id = ? AND lider_id = ?");
+            $stmt_verify->bind_param("ii", $celula_id, $user_id);
+            $stmt_verify->execute();
+            $res_verify = $stmt_verify->get_result();
+            
+            if ($res_verify && $res_verify->num_rows > 0) {
+                // Verificar se email já existe
+                $stmt_check_email = $conn->prepare("SELECT id FROM users WHERE email = ?");
+                $stmt_check_email->bind_param("s", $email);
+                $stmt_check_email->execute();
+                $res_email = $stmt_check_email->get_result();
+                
+                if ($res_email->num_rows > 0) {
+                    $error = "Este email já está registado no sistema.";
+                } else {
+                    // Criar novo membro com senha padrão
+                    $senha_padrao = password_hash('123456', PASSWORD_DEFAULT);
+                    $stmt_insert = $conn->prepare("INSERT INTO users (name, email, phone, password, role, church_id, celula_id, status) VALUES (?, ?, ?, ?, 'membro', ?, ?, 'approved')");
+                    $stmt_insert->bind_param("ssssii", $nome, $email, $telefone, $senha_padrao, $church_id, $celula_id);
+                    
+                    if ($stmt_insert->execute()) {
+                        $message = "Membro '$nome' registado com sucesso! Senha padrão: 123456";
+                    } else {
+                        $error = "Erro ao registar o membro.";
+                    }
+                }
+            } else {
+                $error = "Você não tem permissão para adicionar membros a esta célula.";
+            }
+        } else {
+            $error = "Nome e email são obrigatórios.";
         }
     }
     // --- Ação para ASSOCIAR um membro existente ---
@@ -113,14 +149,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $error = "Erro ao adicionar membro à célula.";
                 }
                 $stmt_assign->close();
-            } else {
-                $error = "Erro ao preparar a atribuição do membro.";
             }
         } else {
             $error = "Não tem permissão para adicionar membros a esta célula.";
         }
     }
-    // --- Ação para REMOVER Membro da Célula (CORRIGIDO) ---
+    // --- Ação para REMOVER Membro da Célula ---
     elseif ($action === 'remove_member') {
         $member_id_to_remove = (int)($_POST['member_id_remove'] ?? 0);
         
@@ -164,11 +198,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     $error = "Erro ao remover o membro da célula.";
                 }
                 $stmt_remove->close();
-            } else {
-                $error = "Erro ao preparar a remoção.";
             }
         } else {
-            $error = "Não tem permissão para remover este membro ou o membro não foi encontrado.";
+            $error = "Não tem permissão para remover este membro.";
         }
     }
 }
@@ -189,13 +221,8 @@ if ($user_role === 'lider') {
             $celula_id_to_view = $celula_res['id'];
         } else {
             $show_create_form = true;
-            if (!isset($_GET['creation_success'])) {
-               $error = "Bem-vindo, líder! Parece que ainda não tem uma célula registada. Preencha os dados abaixo para começar.";
-            }
         }
         $stmt_find_celula->close();
-    } else {
-        $error = "Erro ao buscar dados da sua célula.";
     }
 } elseif ($user_role === 'master_admin') {
     if (isset($_GET['view_celula_id'])) {
@@ -211,8 +238,6 @@ if ($user_role === 'lider') {
                 }
             }
             $stmt_lista->close();
-        } else {
-            $error = "Erro ao buscar a lista de células.";
         }
     }
 }
@@ -225,12 +250,10 @@ if ($celula_id_to_view) {
         $result_celula = $stmt_celula->get_result();
         $celula = $result_celula ? $result_celula->fetch_assoc() : null;
         $stmt_celula->close();
-    } else {
-        $error = "Erro ao preparar a consulta da célula.";
     }
     
     if (!$celula) {
-        $error = "Célula não encontrada ou erro na consulta.";
+        $error = "Célula não encontrada.";
         $celula_id_to_view = null; 
     }
 }
@@ -248,8 +271,6 @@ if ($celula) {
             }
         }
         $stmt_membros->close();
-    } else {
-        $error = "Erro ao buscar membros da célula.";
     }
 }
 
@@ -258,393 +279,369 @@ if (isset($_GET['creation_success'])) {
 }
 
 $conn->close();
+
+// Helper para gerar iniciais
+function getInitials($name) {
+    $words = explode(' ', trim($name));
+    $initials = '';
+    foreach (array_slice($words, 0, 2) as $word) {
+        $initials .= strtoupper(mb_substr($word, 0, 1));
+    }
+    return $initials ?: 'U';
+}
+
+// Cores para avatares
+$avatar_colors = [
+    ['bg' => 'bg-blue-100', 'text' => 'text-blue-600'],
+    ['bg' => 'bg-purple-100', 'text' => 'text-purple-600'],
+    ['bg' => 'bg-green-100', 'text' => 'text-green-600'],
+    ['bg' => 'bg-amber-100', 'text' => 'text-amber-600'],
+    ['bg' => 'bg-pink-100', 'text' => 'text-pink-600'],
+    ['bg' => 'bg-teal-100', 'text' => 'text-teal-600'],
+];
 ?>
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt">
 <head>
     <?php require_once __DIR__ . '/../includes/pwa_head.php'; ?>
-    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Gestão de Células - Life Church</title>
-    <script src="https://cdn.tailwindcss.com/3.4.1"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script>
-      tailwind.config = { theme: { extend: { colors: { primary: "#1976D2", secondary: "#BBDEFB" }, borderRadius: { button: "8px" } } } };
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1d72e8",
+                        primaryLight: "#eef2ff",
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft-xl': '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)',
+                        'card': '0 4px 20px rgba(0, 0, 0, 0.04)',
+                    },
+                },
+            },
+        };
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Pacifico&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.2.0/remixicon.min.css"/>
     <style>
-      body { font-family: 'Roboto', sans-serif; background-color: #f9fafb; }
-      .sidebar-item.active { background-color: #E3F2FD; color: #1976D2; font-weight: 500; }
-      .sidebar-item.active::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 3px; background-color: #1976D2; }
-      .modal, .dropdown-menu { transition: opacity 0.3s ease; }
-      .modal-content { transition: transform 0.3s ease, opacity 0.3s ease; }
-      #sidebar { transition: transform 0.3s ease-in-out; }
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div class="lg:flex">
-        <aside id="sidebar" class="w-64 h-screen bg-white border-r border-gray-200 flex-shrink-0 flex flex-col fixed lg:sticky top-0 z-40 transform -translate-x-full lg:translate-x-0">
-             <div class="p-6 border-b border-gray-100 flex items-center justify-between">
-                 <span class="text-2xl font-['Pacifico'] text-primary">Life Church</span>
-                  <button id="close-sidebar-btn" class="lg:hidden text-gray-500 hover:text-gray-800"><i class="ri-close-line ri-xl"></i></button>
-             </div>
-             <nav class="flex-1 overflow-y-auto py-4">
-                  <div class="px-4 mb-6">
-                      <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Menu Principal</p>
-                      <?php if (in_array($_SESSION['user_role'], ['lider', 'master_admin'])): ?>
-                          <a href="celulas.php" class="sidebar-item relative flex items-center px-4 py-3 text-gray-600 rounded-lg mb-1 <?php echo $currentPage === 'celulas.php' ? 'active' : ''; ?>"><i class="ri-group-2-line ri-lg mr-3"></i><span>Minha Célula</span></a>
-                          <a href="celulas_presencas.php<?php if($user_role === 'master_admin' && $celula) echo '?celula_id='.$celula['id']; ?>" class="sidebar-item relative flex items-center px-4 py-3 text-gray-600 rounded-lg mb-1 <?php echo $currentPage === 'celulas_presencas.php' ? 'active' : ''; ?>"><i class="ri-file-list-3-line ri-lg mr-3"></i><span>Registar Atividades</span></a>
-                      <?php endif; ?>
-                  </div>
-                  <div class="px-4">
-                      <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Sistema</p>
-                      <a href="settings.php" class="sidebar-item relative flex items-center px-4 py-3 text-gray-600 rounded-lg mb-1 <?php echo $currentPage === 'settings.php' ? 'active' : ''; ?>"><i class="ri-settings-3-line ri-lg mr-3"></i><span>Definições</span></a>
-                      <a href="logout.php" class="sidebar-item relative flex items-center px-4 py-3 text-gray-600 rounded-lg hover:bg-gray-100"><i class="ri-logout-box-line ri-lg mr-3"></i><span>Sair</span></a>
-                  </div>
-             </nav>
-        </aside>
+<body class="min-h-screen flex flex-col bg-[#f8fafc] antialiased text-[#1a1a1a]">
 
-        <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
-
-        <div class="flex-1 flex flex-col w-full min-w-0">
-            <header class="bg-white border-b border-gray-200 shadow-sm z-20 sticky top-0">
-                 <div class="flex items-center justify-between h-16 px-6">
-                     <div class="flex items-center">
-                         <?php if ($user_role !== 'lider'): ?>
-                            <button id="open-sidebar-btn" class="lg:hidden mr-4 text-gray-600 hover:text-primary"><i class="ri-menu-line ri-lg"></i></button>
-                         <?php endif; ?>
-                         <h1 class="text-lg font-medium text-gray-800">Gestão de Células</h1>
-                     </div>
-                 </div>
-            </header>
-
-            <main class="flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
-                <?php if ($message): ?><div id="alert-message" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-md shadow flex justify-between items-center"><span><?php echo htmlspecialchars($message); ?></span><button onclick="this.parentElement.style.display='none'"><i class="ri-close-line"></i></button></div><?php endif; ?>
-                <?php if ($error): ?><div id="alert-error" class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md shadow flex justify-between items-center"><span><?php echo htmlspecialchars($error); ?></span><button onclick="this.parentElement.style.display='none'"><i class="ri-close-line"></i></button></div><?php endif; ?>
-
-                <?php if ($celula): ?>
-                       <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-primary">
-                           <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                               <div>
-                                   <h2 class="text-xl font-bold text-gray-800"><?php echo htmlspecialchars($celula['nome']); ?></h2>
-                                   <div class="mt-2 flex items-center gap-4 text-sm text-gray-600">
-                                       <div class="flex items-center gap-2"><i class="ri-calendar-event-line text-primary"></i> <span><?php echo htmlspecialchars($celula['dia_encontro']); ?></span></div>
-                                       <div class="flex items-center gap-2"><i class="ri-time-line text-primary"></i> <span><?php echo date('H:i', strtotime($celula['horario'])); ?></span></div>
-                                       <div class="flex items-center gap-2"><i class="ri-map-pin-line text-primary"></i> <span><?php echo htmlspecialchars($celula['endereco']); ?></span></div>
-                                   </div>
-                               </div>
-                               <div class="flex items-center gap-2">
-                                    <?php if ($user_role === 'master_admin'): ?>
-                                       <a href="celulas.php" class="text-sm text-primary hover:underline">&laquo; Voltar à lista</a>
-                                   <?php endif; ?>
-                                   <a href="celulas_presencas.php?celula_id=<?php echo $celula['id']; ?>" class="bg-secondary text-primary font-bold py-2 px-4 rounded-button hover:bg-blue-200 transition-colors">
-                                        Lançar Relatório Mensal
-                                   </a>
-                               </div>
-                           </div>
-                       </div>
-                       
-                       <div class="bg-white rounded-lg shadow-md">
-                           <div class="flex flex-col sm:flex-row justify-between sm:items-center p-6 border-b">
-                                <h3 class="text-lg font-medium text-gray-900 mb-3 sm:mb-0">Membros da Célula</h3>
-                                <button id="openSelectMemberModalBtn" class="bg-primary text-white py-2 px-4 rounded-button hover:bg-blue-700 text-sm font-medium w-full sm:w-auto">Adicionar Membro</button>
-                           </div>
-                            <div class="space-y-4 p-4">
-                                <div class="hidden lg:grid grid-cols-12 gap-4 px-4 py-2 text-xs text-gray-700 uppercase bg-gray-50 rounded-lg font-medium">
-                                    <div class="col-span-4">Nome</div>
-                                    <div class="col-span-4">Email</div>
-                                    <div class="col-span-2">Telefone</div>
-                                    <div class="col-span-2 text-right">Ações</div>
-                                </div>
-                                <?php if (empty($membros_celula)): ?>
-                                    <div class="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                                        <i class="ri-user-add-line text-4xl mb-2 block text-gray-300"></i>
-                                        Nenhum membro nesta célula.
-                                    </div>
-                                <?php else: ?>
-                                    <?php foreach ($membros_celula as $membro): ?>
-                                    <!-- Mobile Card / Desktop Row -->
-                                    <div class="bg-white border border-gray-200 rounded-lg p-4 lg:grid lg:grid-cols-12 lg:gap-4 lg:items-center hover:bg-gray-50 transition shadow-sm lg:shadow-none">
-                                        <!-- Mobile Header -->
-                                        <div class="flex items-center justify-between lg:hidden mb-3 pb-3 border-b border-gray-100">
-                                            <span class="font-bold text-gray-900"><?php echo htmlspecialchars($membro['name']); ?></span>
-                                            <button class="remove-member-btn text-red-600 bg-red-50 p-2 rounded-full hover:bg-red-100" data-id="<?php echo $membro['id']; ?>" data-name="<?php echo htmlspecialchars($membro['name']); ?>" title="Remover da Célula">
-                                                 <i class="ri-user-unfollow-line"></i>
-                                            </button>
-                                        </div>
-
-                                        <!-- Desktop Fields -->
-                                        <div class="col-span-4 hidden lg:block font-medium text-gray-900"><?php echo htmlspecialchars($membro['name']); ?></div>
-                                        
-                                        <!-- Shared Fields -->
-                                        <div class="col-span-4 text-sm text-gray-600 mb-1 lg:mb-0 flex items-center lg:block">
-                                            <i class="ri-mail-line lg:hidden mr-2 text-gray-400"></i>
-                                            <span class="truncate"><?php echo htmlspecialchars($membro['email']); ?></span>
-                                        </div>
-                                        <div class="col-span-2 text-sm text-gray-600 lg:mb-0 flex items-center lg:block">
-                                            <i class="ri-phone-line lg:hidden mr-2 text-gray-400"></i>
-                                            <span><?php echo htmlspecialchars($membro['phone']); ?></span>
-                                        </div>
-
-                                        <!-- Desktop Actions -->
-                                        <div class="col-span-2 text-right hidden lg:block">
-                                             <button class="remove-member-btn text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50 transition" data-id="<?php echo $membro['id']; ?>" data-name="<?php echo htmlspecialchars($membro['name']); ?>" title="Remover da Célula">
-                                                 <i class="ri-user-unfollow-line"></i>
-                                             </button>
-                                        </div>
-                                    </div>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </div>
-                       </div>
-                
-                <?php elseif ($show_create_form): ?>
-                       <div class="bg-white p-6 rounded-lg shadow-md">
-                           <h3 class="text-lg font-medium text-gray-900 mb-4">Criar Minha Célula</h3>
-                           <form method="POST" action="celulas.php" class="space-y-4">
-                               <input type="hidden" name="action" value="create_celula">
-                               <div><label for="nome_celula" class="block text-sm font-medium text-gray-700">Nome da Célula</label><input type="text" name="nome_celula" id="nome_celula" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"></div>
-                               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                   <div><label for="dia_encontro" class="block text-sm font-medium text-gray-700">Dia da Reunião</label><select name="dia_encontro" id="dia_encontro" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"><option value="Monday">Segunda-feira</option><option value="Tuesday">Terça-feira</option><option value="Wednesday">Quarta-feira</option><option value="Thursday">Quinta-feira</option><option value="Friday">Sexta-feira</option><option value="Saturday">Sábado</option><option value="Sunday">Domingo</option></select></div>
-                                   <div><label for="horario" class="block text-sm font-medium text-gray-700">Horário</label><input type="time" name="horario" id="horario" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"></div>
-                               </div>
-                               <div><label for="endereco" class="block text-sm font-medium text-gray-700">Endereço da Reunião</label><input type="text" name="endereco" id="endereco" required class="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"></div>
-                               <div class="text-right"><button type="submit" class="w-full sm:w-auto inline-flex justify-center py-2 px-6 border border-transparent rounded-button shadow-sm font-medium text-white bg-primary hover:bg-blue-700">Criar Célula</button></div>
-                           </form>
-                       </div>
-
-                <?php elseif ($user_role === 'master_admin'): ?>
-                       <div class="bg-white rounded-lg shadow-md p-4 sm:p-6">
-                           <h3 class="text-lg font-medium text-gray-900 border-b pb-4 mb-4">Lista de Todas as Células</h3>
-                           <div class="space-y-4">
-                                <div class="hidden md:grid grid-cols-4 gap-4 px-4 py-2 text-xs text-gray-700 uppercase bg-gray-50 rounded-lg font-medium">
-                                    <div class="col-span-1">Nome da Célula</div>
-                                    <div class="col-span-1">Líder</div>
-                                    <div class="col-span-1">Igreja</div>
-                                    <div class="col-span-1 text-right">Ação</div>
-                                </div>
-                                <?php if (empty($lista_celulas)): ?>
-                                    <div class="text-center py-4 text-gray-500">Nenhuma célula encontrada.</div>
-                                <?php else: ?>
-                                    <?php foreach ($lista_celulas as $item_celula): ?>
-                                    <!-- Mobile Card -->
-                                    <div class="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-4 md:gap-4 md:items-center hover:bg-gray-50 transition shadow-sm md:shadow-none">
-                                        <div class="col-span-1 mb-2 md:mb-0">
-                                            <span class="font-bold md:hidden block text-xs text-gray-500 uppercase mb-1">Célula</span>
-                                            <span class="text-gray-900 font-medium"><?php echo htmlspecialchars($item_celula['nome']); ?></span>
-                                        </div>
-                                        <div class="col-span-1 mb-2 md:mb-0">
-                                            <span class="font-bold md:hidden block text-xs text-gray-500 uppercase mb-1">Líder</span>
-                                            <div class="flex items-center">
-                                                <i class="ri-user-star-line text-primary mr-2 md:hidden"></i>
-                                                <?php echo htmlspecialchars($item_celula['lider_nome']); ?>
-                                            </div>
-                                        </div>
-                                        <div class="col-span-1 mb-2 md:mb-0">
-                                            <span class="font-bold md:hidden block text-xs text-gray-500 uppercase mb-1">Igreja</span>
-                                            <span class="text-sm bg-blue-50 text-blue-700 px-2 py-1 rounded-full"><?php echo htmlspecialchars($item_celula['church_name']); ?></span>
-                                        </div>
-                                        <div class="col-span-1 text-right mt-3 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0">
-                                            <a href="celulas.php?view_celula_id=<?php echo $item_celula['id']; ?>" class="w-full md:w-auto block md:inline-block text-center bg-white border border-primary text-primary hover:bg-primary hover:text-white transition-colors duration-200 py-2 px-4 rounded-button text-sm font-medium">Ver Detalhes</a>
-                                        </div>
-                                    </div>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                           </div>
-                       </div>
-                <?php endif; ?>
-            </main>
-        </div>
-    </div>
-    
-    <!-- Modal para Selecionar Membro -->
-    <div id="selectMemberModal" class="modal fixed inset-0 bg-black bg-opacity-60 z-50 flex items-end sm:items-center justify-center hidden p-0 sm:p-4">
-        <div class="modal-content bg-white w-full max-w-lg rounded-t-xl sm:rounded-lg shadow-xl transform scale-100 opacity-0 transition-all duration-300 h-[80vh] sm:h-auto flex flex-col">
-            <div class="flex justify-between items-center p-4 border-b">
-                <h3 class="text-lg font-medium">Selecionar Membro</h3>
-                <button id="closeSelectMemberModal" class="text-gray-500 hover:text-gray-800 p-2"><i class="ri-close-line ri-xl"></i></button>
+<?php if ($user_role === 'lider' && $celula): ?>
+    <!-- ==================== LAYOUT PARA LÍDER COM CÉLULA ==================== -->
+    <main class="flex-1 max-w-2xl mx-auto w-full px-4 pt-6 pb-32">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6">
+            <div class="flex flex-col">
+                <span class="text-gray-400 text-sm font-medium leading-none mb-1">Bem-vindo,</span>
+                <h2 class="text-2xl lg:text-3xl font-extrabold text-[#1a1a1a] leading-tight">Gestão de Células</h2>
             </div>
-            <div class="p-4 border-b bg-gray-50">
-                <div class="relative">
-                    <i class="ri-search-line absolute left-3 top-3 text-gray-400"></i>
-                    <input type="text" id="memberSearchInput" placeholder="Pesquisar por nome ou email..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+        </header>
+
+        <?php if ($message): ?>
+            <div class="bg-green-50 border border-green-200 text-green-700 p-4 rounded-2xl mb-6 flex items-center gap-3">
+                <span class="material-symbols-outlined text-green-600">check_circle</span>
+                <span class="text-sm font-medium"><?php echo htmlspecialchars($message); ?></span>
+            </div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl mb-6 flex items-center gap-3">
+                <span class="material-symbols-outlined text-red-600">error</span>
+                <span class="text-sm font-medium"><?php echo htmlspecialchars($error); ?></span>
+            </div>
+        <?php endif; ?>
+
+        <!-- Card do Líder -->
+        <div class="bg-white rounded-[32px] shadow-soft-xl border border-gray-50 p-6 lg:p-8 mb-8 relative overflow-hidden">
+            <div class="relative z-10">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-primary text-[10px] font-black uppercase tracking-[0.2em]">Líder da Célula</span>
+                    <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined">verified</span>
+                    </div>
+                </div>
+                <h3 class="text-2xl lg:text-3xl font-extrabold text-[#1a1a1a] mb-5"><?php echo htmlspecialchars($user_name); ?></h3>
+                <div class="flex flex-wrap gap-3">
+                    <div class="flex items-center gap-2 px-4 py-2 bg-[#f8fafc] rounded-xl border border-gray-100">
+                        <span class="material-symbols-outlined text-primary text-xl">calendar_month</span>
+                        <span class="text-gray-600 text-sm font-semibold"><?php echo htmlspecialchars($celula['dia_encontro'] ?? 'N/A'); ?></span>
+                    </div>
+                    <div class="flex items-center gap-2 px-4 py-2 bg-[#f8fafc] rounded-xl border border-gray-100">
+                        <span class="material-symbols-outlined text-primary text-xl">schedule</span>
+                        <span class="text-gray-600 text-sm font-semibold"><?php echo htmlspecialchars($celula['horario'] ?? 'N/A'); ?></span>
+                    </div>
+                    <div class="flex items-center gap-2 px-4 py-2 bg-[#f8fafc] rounded-xl border border-gray-100">
+                        <span class="material-symbols-outlined text-primary text-xl">location_on</span>
+                        <span class="text-gray-600 text-sm font-semibold"><?php echo htmlspecialchars($celula['endereco'] ?? 'N/A'); ?></span>
+                    </div>
                 </div>
             </div>
-            <div id="available-members-list" class="p-4 overflow-y-auto space-y-2 flex-1">
-                <!-- Lista de membros será preenchida por JavaScript -->
-            </div>
         </div>
-    </div>
 
-    <!-- Modal para Confirmar Remoção -->
-    <div id="removeConfirmationModal" class="modal fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden p-4">
-        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md transform scale-95 opacity-0">
-            <div class="p-6">
-                <h3 class="text-lg font-semibold">Confirmar Remoção</h3>
-                <p class="mt-2 text-sm text-gray-600">Tem a certeza que deseja remover o membro <strong id="member_name_to_remove"></strong> desta célula? Esta ação não apaga o utilizador do sistema.</p>
+        <!-- Secção de Membros -->
+        <section>
+            <div class="flex items-baseline justify-between mb-5 px-1">
+                <div class="flex items-center gap-3">
+                    <h3 class="text-xl font-extrabold text-[#1a1a1a]">Membros</h3>
+                    <span class="bg-gray-100 text-[#1a1a1a] text-xs font-bold px-3 py-1 rounded-full"><?php echo count($membros_celula); ?></span>
+                </div>
             </div>
-            <div class="flex justify-end items-center p-4 border-t bg-gray-50 rounded-b-lg space-x-3">
-                <button type="button" id="cancelRemove" class="bg-gray-200 text-gray-800 py-2 px-4 rounded-button hover:bg-gray-300">Cancelar</button>
-                <form id="removeMemberForm" method="POST" action="celulas.php?view_celula_id=<?php echo htmlspecialchars($celula_id_to_view ?? ''); ?>">
-                    <input type="hidden" name="action" value="remove_member">
-                    <input type="hidden" name="member_id_remove" id="member_id_to_remove">
-                    <button type="submit" class="bg-red-600 text-white py-2 px-4 rounded-button hover:bg-red-700">Confirmar Remoção</button>
-                </form>
-            </div>
-        </div>
-    </div>
 
-    <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const sidebar = document.getElementById('sidebar');
-        const openBtn = document.getElementById('open-sidebar-btn');
-        const closeBtn = document.getElementById('close-sidebar-btn');
-        const overlay = document.getElementById('sidebar-overlay');
-        const showSidebar = () => { sidebar.classList.remove('-translate-x-full'); overlay.classList.remove('hidden'); };
-        const hideSidebar = () => { sidebar.classList.add('-translate-x-full'); overlay.classList.add('hidden'); };
-        if(openBtn) openBtn.addEventListener('click', showSidebar);
-        if(closeBtn) closeBtn.addEventListener('click', hideSidebar);
-        if(overlay) overlay.addEventListener('click', hideSidebar);
-
-        // --- LÓGICA DO MODAL DE SELEÇÃO DE MEMBROS ---
-        const selectMemberModal = document.getElementById('selectMemberModal');
-        const openSelectMemberModalBtn = document.getElementById('openSelectMemberModalBtn');
-        const closeSelectMemberModalBtn = document.getElementById('closeSelectMemberModal');
-        const memberSearchInput = document.getElementById('memberSearchInput');
-        const availableMembersList = document.getElementById('available-members-list');
-        const celulaId = <?php echo json_encode($celula_id_to_view); ?>;
-
-        async function fetchAvailableMembers(searchTerm = '') {
-            availableMembersList.innerHTML = '<p class="text-center text-gray-500">A pesquisar...</p>';
-            try {
-                const response = await fetch(`celulas.php?action=get_available_members&search=${encodeURIComponent(searchTerm)}`);
-                const users = await response.json();
-                
-                availableMembersList.innerHTML = '';
-                if (users.length > 0) {
-                    users.forEach(user => {
-                        const userDiv = document.createElement('div');
-                        userDiv.className = 'p-3 border rounded-lg hover:bg-gray-100 cursor-pointer flex justify-between items-center';
-                        userDiv.innerHTML = `
-                            <div>
-                                <p class="font-medium">${user.name}</p>
-                                <p class="text-sm text-gray-500">${user.email}</p>
+            <?php if (empty($membros_celula)): ?>
+                <div class="bg-white rounded-[24px] p-8 shadow-card border border-gray-50 text-center">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-3xl text-gray-400">group_off</span>
+                    </div>
+                    <h4 class="font-bold text-gray-700 mb-2">Nenhum membro ainda</h4>
+                    <p class="text-sm text-gray-500">Clique no botão abaixo para adicionar o primeiro membro à sua célula.</p>
+                </div>
+            <?php else: ?>
+                <div class="grid grid-cols-1 gap-4">
+                    <?php foreach ($membros_celula as $index => $membro): 
+                        $color = $avatar_colors[$index % count($avatar_colors)];
+                    ?>
+                        <div class="bg-white rounded-[24px] p-5 shadow-card border border-gray-50 flex items-center gap-4 relative">
+                            <div class="w-14 h-14 rounded-2xl <?php echo $color['bg']; ?> <?php echo $color['text']; ?> flex items-center justify-center font-extrabold text-lg shrink-0">
+                                <?php echo getInitials($membro['name']); ?>
                             </div>
-                            <button class="assign-member-btn bg-primary text-white text-xs py-1 px-3 rounded-full hover:bg-blue-700" data-user-id="${user.id}">Adicionar</button>
-                        `;
-                        availableMembersList.appendChild(userDiv);
-                    });
-                } else {
-                    availableMembersList.innerHTML = '<p class="text-center text-gray-500">Nenhum membro disponível encontrado.</p>';
-                }
-            } catch (e) {
-                availableMembersList.innerHTML = '<p class="text-center text-red-500">Erro ao carregar membros.</p>';
-            }
-        }
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-bold text-base text-[#1a1a1a] mb-1 truncate"><?php echo htmlspecialchars($membro['name']); ?></h4>
+                                <div class="space-y-0.5">
+                                    <div class="flex items-center gap-2 text-gray-400">
+                                        <span class="material-symbols-outlined text-base">mail</span>
+                                        <span class="text-xs truncate"><?php echo htmlspecialchars($membro['email']); ?></span>
+                                    </div>
+                                    <?php if (!empty($membro['phone'])): ?>
+                                        <div class="flex items-center gap-2 text-gray-400">
+                                            <span class="material-symbols-outlined text-base">call</span>
+                                            <span class="text-xs"><?php echo htmlspecialchars($membro['phone']); ?></span>
+                                        </div>
+                                    <?php else: ?>
+                                        <div class="flex items-center gap-2 text-gray-300">
+                                            <span class="material-symbols-outlined text-base">cancel</span>
+                                            <span class="text-xs italic">Sem telefone</span>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <form method="POST" class="shrink-0" onsubmit="return confirm('Tem certeza que deseja remover este membro?')">
+                                <input type="hidden" name="action" value="remove_member">
+                                <input type="hidden" name="member_id_remove" value="<?php echo $membro['id']; ?>">
+                                <button type="submit" class="flex items-center justify-center text-gray-300 hover:text-red-500 transition-colors p-2 rounded-xl hover:bg-red-50">
+                                    <span class="material-symbols-outlined text-xl">person_remove</span>
+                                </button>
+                            </form>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
 
-        async function assignMemberToCell(userId) {
-            const formData = new FormData();
-            formData.append('action', 'assign_member');
-            formData.append('user_id', userId);
-            formData.append('celula_id', celulaId);
+        <!-- Botão Flutuante de Adicionar Membro -->
+        <div class="fixed bottom-24 right-4 z-40">
+            <button onclick="openAddMemberModal()" class="bg-primary hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-2xl shadow-2xl shadow-primary/40 transition-all flex items-center gap-3 transform hover:scale-105 active:scale-95">
+                <span class="material-symbols-outlined text-2xl">add</span>
+                <span class="text-sm">Membro</span>
+            </button>
+        </div>
+    </main>
 
-            try {
-                const response = await fetch('celulas.php?view_celula_id='+celulaId, {
-                    method: 'POST',
-                    body: formData
-                });
-                window.location.reload();
-            } catch (e) {
-                alert('Ocorreu um erro de comunicação.');
-            }
-        }
-
-        if (openSelectMemberModalBtn) {
-            openSelectMemberModalBtn.addEventListener('click', () => {
-                selectMemberModal.classList.remove('hidden');
-                setTimeout(() => selectMemberModal.querySelector('.modal-content').classList.add('opacity-100', 'scale-100'), 10);
-                fetchAvailableMembers();
-            });
-        }
-
-        const hideSelectMemberModal = () => {
-            selectMemberModal.querySelector('.modal-content').classList.remove('opacity-100', 'scale-100');
-            setTimeout(() => selectMemberModal.classList.add('hidden'), 300);
-        };
-
-        if (closeSelectMemberModalBtn) {
-            closeSelectMemberModalBtn.addEventListener('click', hideSelectMemberModal);
-        }
-
-        let searchTimeout;
-        if (memberSearchInput) {
-            memberSearchInput.addEventListener('keyup', () => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    fetchAvailableMembers(memberSearchInput.value);
-                }, 300);
-            });
-        }
-        
-        if (availableMembersList) {
-            availableMembersList.addEventListener('click', (e) => {
-                if (e.target.classList.contains('assign-member-btn')) {
-                    const userId = e.target.dataset.userId;
-                    assignMemberToCell(userId);
-                }
-            });
-        }
-
-        // --- LÓGICA DO MODAL DE REMOÇÃO ---
-        const removeModal = document.getElementById('removeConfirmationModal');
-        const cancelRemoveBtn = document.getElementById('cancelRemove');
-        const memberNameToRemoveEl = document.getElementById('member_name_to_remove');
-        const memberIdToRemoveInput = document.getElementById('member_id_to_remove');
-
-        document.querySelectorAll('.remove-member-btn').forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                const memberId = button.dataset.id;
-                const memberName = button.dataset.name;
+    <!-- Modal Adicionar Membro -->
+    <div id="addMemberModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeAddMemberModal()"></div>
+        <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-[32px] p-6 pb-10 max-h-[85vh] overflow-y-auto transform transition-transform">
+            <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6"></div>
+            <h3 class="text-xl font-bold text-center mb-6">Adicionar Membro</h3>
+            
+            <form method="POST" class="space-y-4">
+                <input type="hidden" name="action" value="register_member">
+                <input type="hidden" name="celula_id" value="<?php echo $celula['id']; ?>">
                 
-                memberNameToRemoveEl.textContent = memberName;
-                memberIdToRemoveInput.value = memberId;
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nome completo *</label>
+                    <input type="text" name="nome" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Ex: João Silva">
+                </div>
                 
-                removeModal.classList.remove('hidden');
-                setTimeout(() => removeModal.querySelector('.modal-content').classList.add('opacity-100', 'scale-100'), 10);
-            });
-        });
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                    <input type="email" name="email" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary" placeholder="email@exemplo.com">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
+                    <input type="text" name="telefone" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary" placeholder="84 123 4567">
+                </div>
+                
+                <p class="text-xs text-gray-500 bg-gray-50 p-3 rounded-xl">
+                    <span class="font-semibold">Nota:</span> O membro será criado com a senha padrão <strong>123456</strong>. Ele deverá alterar após o primeiro login.
+                </p>
+                
+                <button type="submit" class="w-full bg-primary hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined">person_add</span>
+                    Adicionar Membro
+                </button>
+            </form>
+        </div>
+    </div>
 
-        const hideRemoveModal = () => {
-            removeModal.querySelector('.modal-content').classList.remove('opacity-100', 'scale-100');
-            setTimeout(() => removeModal.classList.add('hidden'), 300);
-        };
-
-        if (cancelRemoveBtn) {
-            cancelRemoveBtn.addEventListener('click', hideRemoveModal);
-        }
-        
-        setTimeout(() => {
-            const alertMsg = document.getElementById('alert-message');
-            const alertErr = document.getElementById('alert-error');
-            if(alertMsg) alertMsg.style.display = 'none';
-            if(alertErr) alertErr.style.display = 'none';
-        }, 5000);
-    });
-    </script>
-    <!-- Mobile Bottom Navigation -->
-    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-        <a href="celulas.php" class="flex flex-col items-center justify-center w-full h-full text-primary bg-blue-50 border-t-2 border-primary transition-colors">
-            <div class="mb-1"><i class="ri-group-2-line text-xl"></i></div>
-            <span class="text-[10px] font-medium leading-none">Célula</span>
+    <!-- Navegação Inferior -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-4 pb-8 z-40">
+        <a class="flex flex-col items-center gap-1 text-primary" href="celulas.php">
+            <span class="material-symbols-outlined text-2xl">groups</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">Célula</span>
         </a>
-        <a href="celulas_presencas.php<?php if($user_role === 'master_admin' && isset($celula_id_to_view)) echo '?celula_id='.$celula_id_to_view; ?>" class="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-primary hover:bg-gray-50 transition-colors">
-            <div class="mb-1"><i class="ri-file-list-3-line text-xl"></i></div>
-            <span class="text-[10px] font-medium leading-none">Atividades</span>
+        <a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="celulas_presencas.php?celula_id=<?php echo $celula['id']; ?>">
+            <span class="material-symbols-outlined text-2xl">assignment</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">Atividades</span>
         </a>
-        <a href="settings.php" class="flex flex-col items-center justify-center w-full h-full text-gray-500 hover:text-primary hover:bg-gray-50 transition-colors">
-            <div class="mb-1"><i class="ri-settings-3-line text-xl"></i></div>
-            <span class="text-[10px] font-medium leading-none">Definições</span>
+        <a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="settings.php">
+            <span class="material-symbols-outlined text-2xl">settings</span>
+            <span class="text-[10px] font-bold uppercase tracking-wider">Definições</span>
         </a>
     </nav>
+
+    <script>
+    function openAddMemberModal() {
+        document.getElementById('addMemberModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeAddMemberModal() {
+        document.getElementById('addMemberModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+    </script>
+
+<?php elseif ($user_role === 'lider' && $show_create_form): ?>
+    <!-- ==================== FORMULÁRIO DE CRIAÇÃO DE CÉLULA ==================== -->
+    <main class="flex-1 max-w-lg mx-auto w-full px-4 pt-8 pb-10">
+        <header class="mb-8 text-center">
+            <div class="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span class="material-symbols-outlined text-4xl text-primary">add_circle</span>
+            </div>
+            <h2 class="text-2xl font-extrabold text-[#1a1a1a] mb-2">Criar Sua Célula</h2>
+            <p class="text-gray-500 text-sm">Preencha os dados abaixo para iniciar a gestão da sua célula.</p>
+        </header>
+
+        <?php if ($error): ?>
+            <div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl mb-6 flex items-center gap-3">
+                <span class="material-symbols-outlined text-amber-600">info</span>
+                <span class="text-sm"><?php echo htmlspecialchars($error); ?></span>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" class="bg-white rounded-[24px] shadow-card border border-gray-50 p-6 space-y-4">
+            <input type="hidden" name="action" value="create_celula">
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nome da Célula</label>
+                <input type="text" name="nome_celula" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Ex: Célula Vida Nova">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Dia do Encontro</label>
+                <select name="dia_encontro" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary bg-white">
+                    <option value="">Selecione...</option>
+                    <option value="Segunda-feira">Segunda-feira</option>
+                    <option value="Terça-feira">Terça-feira</option>
+                    <option value="Quarta-feira">Quarta-feira</option>
+                    <option value="Quinta-feira">Quinta-feira</option>
+                    <option value="Sexta-feira">Sexta-feira</option>
+                    <option value="Sábado">Sábado</option>
+                    <option value="Domingo">Domingo</option>
+                </select>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Horário</label>
+                <input type="time" name="horario" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary">
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Endereço / Local</label>
+                <input type="text" name="endereco" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Ex: Rua da Igreja, 100">
+            </div>
+            
+            <button type="submit" class="w-full bg-primary hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-colors flex items-center justify-center gap-2 mt-4">
+                <span class="material-symbols-outlined">church</span>
+                Criar Célula
+            </button>
+        </form>
+    </main>
+
+<?php elseif ($user_role === 'master_admin'): ?>
+    <!-- ==================== LAYOUT PARA MASTER ADMIN ==================== -->
+    <main class="flex-1 max-w-4xl mx-auto w-full px-4 pt-6 pb-10">
+        <header class="flex justify-between items-center mb-8">
+            <h2 class="text-2xl lg:text-3xl font-extrabold text-[#1a1a1a]">Todas as Células</h2>
+        </header>
+
+        <?php if ($message): ?>
+            <div class="bg-green-50 border border-green-200 text-green-700 p-4 rounded-2xl mb-6"><?php echo htmlspecialchars($message); ?></div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl mb-6"><?php echo htmlspecialchars($error); ?></div>
+        <?php endif; ?>
+
+        <?php if (!empty($lista_celulas)): ?>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <?php foreach ($lista_celulas as $cel): ?>
+                    <a href="celulas.php?view_celula_id=<?php echo $cel['id']; ?>" class="bg-white rounded-[24px] p-6 shadow-card border border-gray-50 hover:border-primary/30 hover:shadow-lg transition-all block">
+                        <h4 class="font-bold text-lg text-[#1a1a1a] mb-2"><?php echo htmlspecialchars($cel['nome']); ?></h4>
+                        <p class="text-sm text-gray-500 mb-1">Líder: <?php echo htmlspecialchars($cel['lider_nome']); ?></p>
+                        <p class="text-xs text-gray-400">Igreja: <?php echo htmlspecialchars($cel['church_name']); ?></p>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php elseif ($celula): ?>
+            <!-- Visualização de uma célula específica pelo admin -->
+            <div class="bg-white rounded-[24px] p-6 shadow-card border border-gray-50 mb-6">
+                <a href="celulas.php" class="text-primary text-sm font-medium hover:underline mb-4 inline-flex items-center gap-1">
+                    <span class="material-symbols-outlined text-lg">arrow_back</span> Voltar à lista
+                </a>
+                <h3 class="text-2xl font-extrabold mt-4 mb-2"><?php echo htmlspecialchars($celula['nome']); ?></h3>
+                <p class="text-gray-500">Membros: <?php echo count($membros_celula); ?></p>
+            </div>
+            
+            <?php if (!empty($membros_celula)): ?>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <?php foreach ($membros_celula as $index => $membro): 
+                        $color = $avatar_colors[$index % count($avatar_colors)];
+                    ?>
+                        <div class="bg-white rounded-[24px] p-5 shadow-card border border-gray-50 flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-xl <?php echo $color['bg']; ?> <?php echo $color['text']; ?> flex items-center justify-center font-bold text-lg">
+                                <?php echo getInitials($membro['name']); ?>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-bold text-[#1a1a1a] truncate"><?php echo htmlspecialchars($membro['name']); ?></h4>
+                                <p class="text-xs text-gray-400 truncate"><?php echo htmlspecialchars($membro['email']); ?></p>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        <?php else: ?>
+            <div class="bg-white rounded-[24px] p-8 shadow-card border border-gray-50 text-center">
+                <p class="text-gray-500">Nenhuma célula encontrada.</p>
+            </div>
+        <?php endif; ?>
+    </main>
+<?php endif; ?>
+
 </body>
 </html>
