@@ -1,9 +1,9 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1976D2">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="LifeChurch">
-<link rel="apple-touch-icon" href="/assets/images/icon-512.png">
+<link rel="apple-touch-icon" href="/assets/images/LogoApp.png">
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lifechurch-v2';
+const CACHE_NAME = 'lifechurch-v3';
 const urlsToCache = [
   '/admin/dashboard.php',
   '/assets/css/admin.css',
