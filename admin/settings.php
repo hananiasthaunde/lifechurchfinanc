@@ -261,11 +261,57 @@ $conn->close();
             </div>
 
             <?php if ($user_role === 'lider'): ?>
-                <div class="mt-8 mb-20 lg:mb-8">
-                     <a href="logout.php" class="flex items-center justify-center w-full bg-red-50 text-red-600 font-bold py-4 rounded-xl border-2 border-red-100 hover:bg-red-100 transition-colors shadow-sm">
+                <div class="mt-8 mb-20 lg:mb-8 space-y-4">
+                    <!-- PWA Install Button -->
+                    <button id="pwa-install-btn" onclick="installPWA()" style="display: none;" class="flex items-center justify-center w-full bg-gradient-to-r from-primary to-blue-600 text-white font-bold py-4 rounded-xl border-2 border-blue-200 hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg">
+                        <i class="ri-install-line mr-2 text-xl"></i> Instalar Aplicação
+                    </button>
+                    
+                    <!-- iOS Install Instructions (shown only on iOS) -->
+                    <div id="ios-install-hint" style="display: none;" class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+                        <div class="flex items-center justify-center mb-2">
+                            <i class="ri-smartphone-line text-2xl text-primary mr-2"></i>
+                            <span class="font-bold text-gray-800">Instalar no iPhone/iPad</span>
+                        </div>
+                        <p class="text-sm text-gray-600">
+                            Toque no ícone <i class="ri-share-line"></i> <strong>Partilhar</strong> e depois em <strong>"Adicionar ao Ecrã inicial"</strong>
+                        </p>
+                    </div>
+
+                    <a href="logout.php" class="flex items-center justify-center w-full bg-red-50 text-red-600 font-bold py-4 rounded-xl border-2 border-red-100 hover:bg-red-100 transition-colors shadow-sm">
                         <i class="ri-logout-box-line mr-2 text-xl"></i> Sair
                     </a>
                 </div>
+
+                <script>
+                let deferredPrompt = null;
+                
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                    document.getElementById('pwa-install-btn').style.display = 'flex';
+                });
+
+                function installPWA() {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        deferredPrompt.userChoice.then((choiceResult) => {
+                            if (choiceResult.outcome === 'accepted') {
+                                document.getElementById('pwa-install-btn').style.display = 'none';
+                            }
+                            deferredPrompt = null;
+                        });
+                    }
+                }
+
+                // Detect iOS
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+                
+                if (isIOS && !isStandalone) {
+                    document.getElementById('ios-install-hint').style.display = 'block';
+                }
+                </script>
             <?php endif; ?>
 
         </main>
