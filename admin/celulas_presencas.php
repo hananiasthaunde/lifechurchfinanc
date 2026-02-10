@@ -198,7 +198,7 @@ $conn->close();
 <html lang="pt-br">
 <head>
     <?php require_once __DIR__ . '/../includes/pwa_head.php'; ?>
-    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Registo de Atividades - Life Church</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com" rel="preconnect"/>
@@ -210,33 +210,68 @@ $conn->close();
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: {
-                        primary: "#1d72e8",
-                        primaryLight: "#eef2ff",
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
+                    colors: { primary: "#1d72e8", primaryLight: "#eef2ff" },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
                     boxShadow: {
-                        'soft-xl': '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02)',
-                        'card': '0 4px 20px rgba(0, 0, 0, 0.04)',
+                        'soft-xl': '0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.02)',
+                        'card': '0 4px 20px rgba(0,0,0,0.04)',
+                        'native': '0 8px 32px rgba(0,0,0,0.08)',
                     },
                 },
             },
         };
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-            display: inline-block;
-            vertical-align: middle;
-        }
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; display: inline-block; vertical-align: middle; }
+        /* Ripple & Tap */
+        .ripple { position: relative; overflow: hidden; }
+        .ripple::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle, rgba(29,114,232,0.15) 10%, transparent 10.01%); transform: scale(10); opacity: 0; transition: transform .5s, opacity .8s; }
+        .ripple:active::after { transform: scale(0); opacity: 1; transition: 0s; }
+        .tap-bounce { transition: transform 0.1s ease; }
+        .tap-bounce:active { transform: scale(0.96); }
+        /* Bottom sheet */
+        .bottom-sheet-backdrop { transition: opacity 0.3s ease; }
+        .bottom-sheet-content { transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); transform: translateY(100%); }
+        .bottom-sheet-content.active { transform: translateY(0); }
+        /* Animations */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .anim-fade-up { animation: fadeInUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+        .anim-scale-in { animation: scaleIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
+        .anim-delay-1 { animation-delay: 0.05s; }
+        .anim-delay-2 { animation-delay: 0.1s; }
+        .anim-delay-3 { animation-delay: 0.15s; }
+        /* Toast */
+        .toast { animation: toastIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+        .toast.hide { animation: toastOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) both; }
+        @keyframes toastIn { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes toastOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-100%); opacity: 0; } }
+        /* Step transitions */
+        .step-panel { display: none; }
+        .step-panel.active { display: block; animation: fadeInUp 0.35s ease both; }
+        /* Stepper */
+        .step-dot { transition: all 0.3s ease; }
+        .step-dot.completed { background: #22c55e; border-color: #22c55e; color: white; }
+        .step-dot.current { background: #1d72e8; border-color: #1d72e8; color: white; transform: scale(1.1); }
+        .step-line { transition: background 0.3s ease; }
+        /* Member attendance card */
+        .attendance-card { transition: all 0.2s ease; }
+        .attendance-card.present { border-color: #22c55e; background: #f0fdf4; }
+        .attendance-card.absent { border-color: #ef4444; background: #fef2f2; }
+        /* Confetti */
+        @keyframes confetti-fall { 0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+        .confetti-piece { position: fixed; width: 10px; height: 10px; top: -10px; animation: confetti-fall 3s ease-in-out forwards; z-index: 200; pointer-events: none; }
+        /* Timeline */
+        .timeline-item { position: relative; padding-left: 2rem; }
+        .timeline-item::before { content: ''; position: absolute; left: 0.5rem; top: 2rem; bottom: -0.75rem; width: 2px; background: #e5e7eb; }
+        .timeline-item:last-child::before { display: none; }
+        .timeline-dot { position: absolute; left: 0; top: 0.75rem; width: 1.25rem; height: 1.25rem; border-radius: 50%; border: 2px solid; display: flex; align-items: center; justify-content: center; }
+        /* Safe area */
+        .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 24px); }
+        /* Sidebar compatibility */
         .sidebar-item.active { background-color: rgba(29, 114, 232, 0.1); color: #1d72e8; font-weight: 600; }
-        .form-section { border-left: 3px solid #1d72e8; }
-        .notification { transition: opacity 0.5s, transform 0.5s; }
         .modal { transition: opacity 0.3s ease; }
-        .modal-content { transition: transform 0.3s ease, opacity 0.3s ease; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col lg:flex-row bg-[#f8fafc] antialiased text-[#1a1a1a]">
@@ -279,13 +314,28 @@ $conn->close();
     <?php endif; ?>
 
     <div class="flex-1 flex flex-col w-full min-w-0">
-        <!-- Header -->
-        <header class="bg-white border-b border-gray-100 shadow-sm z-20 sticky top-0 px-4 lg:px-8 py-4">
-            <h1 class="text-xl lg:text-2xl font-bold text-[#1a1a1a]">Registo de Atividades</h1>
+        <!-- Toast Container -->
+        <div id="toast-container" class="fixed top-4 left-4 right-4 z-[100] flex flex-col items-center gap-2 pointer-events-none"></div>
+
+        <!-- Hero Header -->
+        <header class="bg-gradient-to-br from-primary via-blue-600 to-blue-700 text-white px-5 pt-5 pb-6 lg:px-8 lg:pt-6 lg:pb-8 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3"></div>
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-blue-200 text-xs font-bold uppercase tracking-[0.15em] mb-1">Registo de Atividades</p>
+                    <h1 class="text-xl lg:text-2xl font-extrabold"><?php echo htmlspecialchars($celula['nome'] ?? 'Célula'); ?></h1>
+                </div>
+                <?php if ($celula): ?>
+                <a href="export_celula_report.php?celula_id=<?php echo $celula['id']; ?>&mes=<?php echo $selected_month; ?>" target="_blank" class="flex items-center gap-2 bg-white/15 backdrop-blur-sm px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-white/25 transition-colors tap-bounce">
+                    <i class="ri-file-download-line"></i>
+                    <span class="hidden sm:inline">Exportar PDF</span>
+                </a>
+                <?php endif; ?>
+            </div>
         </header>
 
         <main class="flex-1 p-4 lg:p-8 lg:pt-6 space-y-6 overflow-y-auto pb-32 lg:pb-8">
-            <div id="notification-container" class="fixed top-20 right-6 z-50 space-y-2"></div>
+            <div id="notification-container" class="hidden"></div>
             
             <?php if ($error_message_display): ?>
                 <div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl flex items-center gap-3">
@@ -305,13 +355,30 @@ $conn->close();
                         <input type="hidden" name="record_id" id="record_id" value="">
 
                         <!-- Stepper Header -->
-                        <div class="mb-6">
-                            <div class="flex items-center justify-between mb-2">
-                                <h2 id="step-title" class="text-xl font-bold text-gray-800">Passo 1: Detalhes</h2>
-                                <span class="text-sm font-medium text-gray-500" id="step-counter">1 de 3</span>
+                        <div class="mb-6 anim-fade-up">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 id="step-title" class="text-lg font-extrabold text-gray-900">Detalhes</h2>
+                                <span class="text-xs font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full" id="step-counter">1 de 3</span>
                             </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                <div id="progress-bar" class="bg-primary h-2.5 rounded-full transition-all duration-300" style="width: 33%"></div>
+                            <!-- Visual Step Dots -->
+                            <div class="flex items-center gap-0">
+                                <div class="flex items-center gap-2 flex-1">
+                                    <div id="dot-1" class="step-dot current w-9 h-9 rounded-full border-2 border-primary bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">
+                                        <i class="ri-settings-3-line"></i>
+                                    </div>
+                                    <div id="line-1" class="step-line h-0.5 flex-1 bg-gray-200 rounded"></div>
+                                </div>
+                                <div class="flex items-center gap-2 flex-1">
+                                    <div id="dot-2" class="step-dot w-9 h-9 rounded-full border-2 border-gray-200 bg-white text-gray-400 flex items-center justify-center text-sm font-bold shrink-0">
+                                        <i class="ri-group-line"></i>
+                                    </div>
+                                    <div id="line-2" class="step-line h-0.5 flex-1 bg-gray-200 rounded"></div>
+                                </div>
+                                <div class="flex items-center gap-0">
+                                    <div id="dot-3" class="step-dot w-9 h-9 rounded-full border-2 border-gray-200 bg-white text-gray-400 flex items-center justify-center text-sm font-bold shrink-0">
+                                        <i class="ri-flag-line"></i>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -550,19 +617,38 @@ $conn->close();
                                 </div>
                             </form>
                         </div>
-                        <div id="monthly-records-container" class="space-y-3">
+                        <div id="monthly-records-container" class="space-y-0">
                             <?php if(empty($registos_do_mes)): ?>
-                                <p class="text-center text-gray-500 py-4" id="no-records-message">Nenhum registo para este mês.</p>
-                            <?php else: ?>
-                                <?php foreach($registos_do_mes as $registo): ?>
-                                <div class="border rounded-lg p-4 flex flex-col sm:flex-row justify-between items-center" data-record-id="<?php echo $registo['id']; ?>">
-                                    <div>
-                                        <p class="font-bold"><?php echo date('d/m/Y', strtotime($registo['data_registo'])); ?> - <span class="capitalize"><?php echo $registo['tipo_registo']; ?></span></p>
+                                <div class="text-center py-10" id="no-records-message">
+                                    <div class="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                                        <i class="ri-calendar-line text-2xl text-gray-300"></i>
                                     </div>
-                                    <div class="flex gap-2 items-center mt-2 sm:mt-0">
-                                        <button class="details-btn text-blue-600 hover:underline text-sm" data-id="<?php echo $registo['id']; ?>">Ver Detalhes</button>
-                                        <button class="edit-btn text-green-600 hover:text-green-800 p-2 rounded-full hover:bg-green-50" title="Editar" data-id="<?php echo $registo['id']; ?>"><i class="ri-pencil-line"></i></button>
-                                        <button class="delete-btn text-red-600 hover:text-red-800 p-2 rounded-full hover:bg-red-50" title="Apagar" data-id="<?php echo $registo['id']; ?>"><i class="ri-delete-bin-line"></i></button>
+                                    <p class="text-sm text-gray-400 font-medium">Nenhum registo para este mês</p>
+                                </div>
+                            <?php else: ?>
+                                <?php foreach($registos_do_mes as $idx => $registo): ?>
+                                <div class="timeline-item anim-fade-up" style="animation-delay: <?php echo $idx * 0.05; ?>s" data-record-id="<?php echo $registo['id']; ?>">
+                                    <div class="timeline-dot border-primary bg-primaryLight">
+                                        <i class="ri-<?php echo $registo['tipo_registo'] === 'celula' ? 'group' : 'church'; ?>-line text-primary text-[10px]"></i>
+                                    </div>
+                                    <div class="bg-white rounded-2xl shadow-card border border-gray-50 p-4 mb-3 tap-bounce">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="text-sm font-bold text-gray-900"><?php echo date('d/m/Y', strtotime($registo['data_registo'])); ?></p>
+                                                <p class="text-xs text-gray-400 capitalize mt-0.5"><?php echo $registo['tipo_registo']; ?></p>
+                                            </div>
+                                            <div class="flex items-center gap-1">
+                                                <button class="details-btn w-8 h-8 flex items-center justify-center rounded-full bg-blue-50 text-primary hover:bg-blue-100 transition-colors" title="Ver Detalhes" data-id="<?php echo $registo['id']; ?>">
+                                                    <i class="ri-eye-line text-sm"></i>
+                                                </button>
+                                                <button class="edit-btn w-8 h-8 flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-colors" title="Editar" data-id="<?php echo $registo['id']; ?>">
+                                                    <i class="ri-pencil-line text-sm"></i>
+                                                </button>
+                                                <button class="delete-btn w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Apagar" data-id="<?php echo $registo['id']; ?>">
+                                                    <i class="ri-delete-bin-line text-sm"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <?php endforeach; ?>
@@ -576,48 +662,53 @@ $conn->close();
     </div>
     
     <?php if ($user_role === 'lider' && $celula): ?>
-    <!-- Mobile Bottom Navigation for Leaders -->
-    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex justify-around py-4 pb-8 z-40">
-        <a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="celulas.php">
-            <span class="material-symbols-outlined text-2xl">groups</span>
+    <!-- Mobile Bottom Navigation (Frosted Glass) -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-100/50 flex justify-around py-3 safe-bottom z-40">
+        <a class="flex flex-col items-center gap-0.5 text-gray-400 hover:text-primary transition-all tap-bounce" href="celulas.php">
+            <i class="ri-group-line text-xl"></i>
             <span class="text-[10px] font-bold uppercase tracking-wider">Célula</span>
         </a>
-        <a class="flex flex-col items-center gap-1 text-primary" href="celulas_presencas.php?celula_id=<?php echo $celula['id']; ?>">
-            <span class="material-symbols-outlined text-2xl">assignment</span>
+        <a class="flex flex-col items-center gap-0.5 text-primary tap-bounce" href="celulas_presencas.php?celula_id=<?php echo $celula['id']; ?>">
+            <div class="w-9 h-9 bg-primary rounded-full flex items-center justify-center -mt-3 mb-0.5 shadow-lg shadow-primary/30">
+                <i class="ri-calendar-check-line text-white text-lg"></i>
+            </div>
             <span class="text-[10px] font-bold uppercase tracking-wider">Atividades</span>
         </a>
-        <a class="flex flex-col items-center gap-1 text-gray-400 hover:text-primary transition-colors" href="settings.php">
-            <span class="material-symbols-outlined text-2xl">settings</span>
+        <a class="flex flex-col items-center gap-0.5 text-gray-400 hover:text-primary transition-all tap-bounce" href="settings.php">
+            <i class="ri-settings-3-line text-xl"></i>
             <span class="text-[10px] font-bold uppercase tracking-wider">Definições</span>
         </a>
     </nav>
     <?php endif; ?>
     
-    <!-- Modal para Detalhes do Registo -->
-    <div id="details-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-2xl">
-            <div class="flex justify-between items-center p-4 border-b">
-                <h3 class="text-lg font-semibold">Detalhes do Registo</h3>
-                <button class="close-modal-btn text-gray-500 hover:text-gray-800"><i class="ri-close-line ri-xl"></i></button>
+    <!-- Modal para Detalhes do Registo (Bottom Sheet on Mobile) -->
+    <div id="details-modal" class="modal fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end lg:items-center justify-center">
+        <div class="modal-content bg-white rounded-t-3xl lg:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col" style="animation: fadeInUp 0.3s ease">
+            <div class="flex justify-between items-center p-5 border-b border-gray-100">
+                <h3 class="text-lg font-extrabold text-gray-900">Detalhes do Registo</h3>
+                <button class="close-modal-btn w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"><i class="ri-close-line"></i></button>
             </div>
-            <div id="details-modal-body" class="p-6 max-h-[70vh] overflow-y-auto">
+            <div id="details-modal-body" class="p-5 overflow-y-auto flex-1">
                 <!-- Conteúdo dinâmico aqui -->
             </div>
         </div>
     </div>
 
-    <!-- Modal para Confirmar Apagar -->
-    <div id="delete-confirmation-modal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-        <div class="modal-content bg-white rounded-lg shadow-xl w-full max-w-md">
+    <!-- Modal para Confirmar Apagar (Bottom Sheet) -->
+    <div id="delete-confirmation-modal" class="modal fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-end lg:items-center justify-center">
+        <div class="modal-content bg-white rounded-t-3xl lg:rounded-2xl shadow-2xl w-full max-w-md" style="animation: fadeInUp 0.3s ease">
             <div class="p-6">
-                <h3 class="text-lg font-semibold text-gray-900">Confirmar Exclusão</h3>
-                <p class="mt-2 text-sm text-gray-600">Tem a certeza que deseja apagar este registo? A ação é irreversível. Para confirmar, digite <strong class="text-red-600">lifechurch</strong> abaixo.</p>
-                <input type="text" id="delete-confirmation-key" class="mt-4 w-full p-2 border border-gray-300 rounded-md" placeholder="Escreva a chave de confirmação">
-                <p id="delete-error-msg" class="text-red-500 text-sm mt-1 hidden">Chave de confirmação incorreta.</p>
+                <div class="w-14 h-14 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="ri-delete-bin-line text-2xl text-red-500"></i>
+                </div>
+                <h3 class="text-lg font-extrabold text-gray-900 text-center">Confirmar Exclusão</h3>
+                <p class="mt-2 text-sm text-gray-500 text-center">Para confirmar, digite <strong class="text-red-600">lifechurch</strong> abaixo.</p>
+                <input type="text" id="delete-confirmation-key" class="mt-4 w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-center font-mono" placeholder="Escreva a chave de confirmação">
+                <p id="delete-error-msg" class="text-red-500 text-xs mt-1 hidden text-center">Chave de confirmação incorreta.</p>
             </div>
-            <div class="flex justify-end items-center p-4 border-t bg-gray-50 rounded-b-lg space-x-3">
-                <button type="button" class="close-modal-btn bg-gray-200 text-gray-800 py-2 px-4 rounded-button hover:bg-gray-300">Cancelar</button>
-                <button id="confirm-delete-btn" class="bg-red-600 text-white py-2 px-4 rounded-button hover:bg-red-700 disabled:opacity-50" disabled>Apagar Registo</button>
+            <div class="flex gap-3 p-4 border-t border-gray-100">
+                <button type="button" class="close-modal-btn flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition-colors">Cancelar</button>
+                <button id="confirm-delete-btn" class="flex-1 bg-red-500 text-white py-3 rounded-xl font-bold hover:bg-red-600 transition-colors disabled:opacity-40" disabled>Apagar</button>
             </div>
         </div>
     </div>
@@ -714,24 +805,31 @@ $conn->close();
         const submitBtn = document.getElementById('submit-btn');
         const membrosDaCelula = <?php echo json_encode($membros_celula); ?>;
         
-        // --- SISTEMA DE NOTIFICAÇÃO ---
+        // --- SISTEMA DE NOTIFICAÇÃO (Toast Nativo) ---
         function showNotification(message, type = 'success') {
-            const bgColor = type === 'success' ? 'bg-green-100' : 'bg-red-100';
-            const borderColor = type === 'success' ? 'border-green-500' : 'border-red-500';
-            const textColor = type === 'success' ? 'text-green-700' : 'text-red-700';
+            const c = document.getElementById('toast-container');
+            const colors = type==='success' ? 'bg-green-500' : type==='error' ? 'bg-red-500' : 'bg-amber-500';
+            const icon = type==='success' ? 'ri-check-line' : type==='error' ? 'ri-error-warning-line' : 'ri-information-line';
+            const t = document.createElement('div');
+            t.className = `toast pointer-events-auto flex items-center gap-3 ${colors} text-white px-5 py-3.5 rounded-2xl shadow-2xl text-sm font-medium max-w-sm w-full`;
+            t.innerHTML = `<i class="${icon} text-lg"></i><span class="flex-1">${message}</span><button onclick="this.parentElement.classList.add('hide');setTimeout(()=>this.parentElement.remove(),300)" class="opacity-70 hover:opacity-100"><i class="ri-close-line"></i></button>`;
+            c.appendChild(t);
+            setTimeout(()=>{t.classList.add('hide');setTimeout(()=>t.remove(),300);},4000);
+        }
 
-            const notification = document.createElement('div');
-            notification.className = `notification ${bgColor} ${borderColor} ${textColor} border-l-4 p-4 rounded-md shadow-lg flex justify-between items-center transform translate-x-full opacity-0`;
-            notification.innerHTML = `<span>${message}</span><button class="close-notification"><i class="ri-close-line"></i></button>`;
-            notificationContainer.appendChild(notification);
-            
-            setTimeout(() => { notification.classList.remove('translate-x-full', 'opacity-0'); }, 100);
-            const close = () => {
-                notification.classList.add('opacity-0');
-                setTimeout(() => notification.remove(), 500);
-            };
-            notification.querySelector('.close-notification').addEventListener('click', close);
-            setTimeout(close, 5000);
+        // Confetti
+        function fireConfetti() {
+            const colors = ['#1d72e8','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
+            for(let i=0;i<30;i++){
+                const p=document.createElement('div');
+                p.className='confetti-piece';
+                p.style.left=Math.random()*100+'vw';
+                p.style.backgroundColor=colors[Math.floor(Math.random()*colors.length)];
+                p.style.animationDelay=Math.random()*2+'s';
+                p.style.borderRadius=Math.random()>0.5?'50%':'0';
+                document.body.appendChild(p);
+                setTimeout(()=>p.remove(),4000);
+            }
         }
 
         // --- LÓGICA DO WIZARD (PASSOS) ---
@@ -739,53 +837,48 @@ $conn->close();
         const totalSteps = 3;
         const prevBtn = document.getElementById('prev-step-btn');
         const nextBtn = document.getElementById('next-step-btn');
-        // submitBtn já definido na linha 581
         const stepTitle = document.getElementById('step-title');
         const stepCounter = document.getElementById('step-counter');
-        const progressBar = document.getElementById('progress-bar');
         const titles = ['Detalhes', 'Chamada', 'Conclusão'];
+        const dotIcons = ['ri-settings-3-line', 'ri-group-line', 'ri-flag-line'];
 
         function updateWizard() {
             try {
-                // Mostrar/Ocultar Passos
                 for(let i=1; i<=totalSteps; i++) {
                     const el = document.getElementById(`step-${i}`);
                     if(el) {
                         if(i === currentStep) {
                             el.classList.remove('hidden');
-                            el.classList.add('animate-fade-in-down');
+                            el.style.animation = 'fadeInUp 0.35s ease both';
                         } else {
                             el.classList.add('hidden');
-                            el.classList.remove('animate-fade-in-down');
+                            el.style.animation = '';
                         }
                     }
                 }
-                
-                // Atualizar Títulos e Progresso
-                if(stepTitle) stepTitle.textContent = `Passo ${currentStep}: ${titles[currentStep-1]}`;
-                if(stepCounter) stepCounter.textContent = `${currentStep} de ${totalSteps}`;
-                if(progressBar) progressBar.style.width = `${(currentStep / totalSteps) * 100}%`;
-
-                // Atualizar Botões
-                if(prevBtn) prevBtn.classList.toggle('hidden', currentStep === 1);
-                
-                if(nextBtn) {
-                     if (currentStep === totalSteps) {
-                        nextBtn.classList.add('hidden');
-                     } else {
-                        nextBtn.classList.remove('hidden');
-                     }
-                }
-
-                if(submitBtn) {
-                    if (currentStep === totalSteps) {
-                        submitBtn.classList.remove('hidden');
+                // Update step dots
+                for(let i=1; i<=totalSteps; i++) {
+                    const dot = document.getElementById(`dot-${i}`);
+                    if(!dot) continue;
+                    dot.classList.remove('completed','current');
+                    if(i < currentStep) {
+                        dot.classList.add('completed');
+                        dot.innerHTML = '<i class="ri-check-line text-sm"></i>';
+                    } else if(i === currentStep) {
+                        dot.classList.add('current');
+                        dot.innerHTML = `<i class="${dotIcons[i-1]}"></i>`;
                     } else {
-                        submitBtn.classList.add('hidden');
+                        dot.className = 'step-dot w-9 h-9 rounded-full border-2 border-gray-200 bg-white text-gray-400 flex items-center justify-center text-sm font-bold shrink-0';
+                        dot.innerHTML = `<i class="${dotIcons[i-1]}"></i>`;
                     }
+                    const line = document.getElementById(`line-${i}`);
+                    if(line) line.style.background = i < currentStep ? '#22c55e' : '#e5e7eb';
                 }
-                
-                // Scroll para o topo
+                if(stepTitle) stepTitle.textContent = titles[currentStep-1];
+                if(stepCounter) stepCounter.textContent = `${currentStep} de ${totalSteps}`;
+                if(prevBtn) prevBtn.classList.toggle('hidden', currentStep === 1);
+                if(nextBtn) nextBtn.classList.toggle('hidden', currentStep === totalSteps);
+                if(submitBtn) submitBtn.classList.toggle('hidden', currentStep !== totalSteps);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } catch (e) {
                 console.error("Erro no Wizard:", e);
@@ -984,6 +1077,7 @@ $conn->close();
                 console.log('Server response:', data);
                 if (data.success) {
                     showNotification(data.message, 'success');
+                    fireConfetti();
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
                     showNotification(data.message, 'error');
